@@ -1,0 +1,4 @@
+python gen_group_extension.py clifford24.npy 5
+python gen_group_extension.py clifford24.npy 6
+python gen_group_extension.py clifford24.npy 7
+python gen_group_extension.py clifford24.npy 8
