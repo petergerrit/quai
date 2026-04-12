@@ -1,0 +1,5 @@
+mpiexec python main.py -n_of_generators 1 -d 3 -t 50 -sample_size 100 -gates_path S60.txt
+mpiexec python main.py -n_of_generators 1 -d 3 -t 50 -sample_size 100 -gates_path S108.txt
+mpiexec python main.py -n_of_generators 1 -d 3 -t 50 -sample_size 100 -gates_path S216.txt
+mpiexec python main.py -n_of_generators 1 -d 3 -t 50 -sample_size 100 -gates_path S648.txt
+mpiexec python main.py -n_of_generators 1 -d 3 -t 50 -sample_size 100 -gates_path S1080.txt
