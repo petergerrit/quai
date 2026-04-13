@@ -68,8 +68,20 @@ def test_family_for_extension_howard_vala() -> None:
 
 def test_family_for_extension_angle_matches_pi_4() -> None:
     assert distillation.family_for_extension("angle", {"theta": math.pi / 4}, 2) == "qubit T"
-    assert distillation.family_for_extension("angle", {"theta": 0.3}, 2) is None
     assert distillation.family_for_extension("angle", {"theta": math.pi / 4}, 3) is None
+
+
+def test_family_for_extension_non_pi4_angle_routes_to_programmable() -> None:
+    """Any θ != π/4 at d=2 should map to the programmable-MSD family."""
+    assert distillation.family_for_extension(
+        "angle", {"theta": 2 * math.pi / 9}, 2
+    ) == "qubit Z-rotation (programmable)"
+    assert distillation.family_for_extension(
+        "angle", {"theta": math.pi / 8}, 2
+    ) == "qubit Z-rotation (programmable)"
+    assert distillation.family_for_extension(
+        "angles", {"phases": [0.1, -0.1]}, 2
+    ) == "qubit Z-rotation (programmable)"
 
 
 def test_protocols_for_qubit_T_include_bravyi_kitaev() -> None:
@@ -85,7 +97,44 @@ def test_protocols_for_qutrit_T_include_triorthogonal() -> None:
     assert all(p.qudit_dim == 3 for p in hits)
 
 
-def test_protocols_for_unknown_extension_returns_research_note() -> None:
+def test_protocols_for_programmable_angle_includes_duclos_cianci() -> None:
+    """A non-π/4 qubit angle should surface the programmable-MSD protocols
+    and flag the Anderson-Jochym-O'Connor exclusion in the note."""
+    hits, note = distillation.protocols_for_extension(
+        "angle", {"theta": 2 * math.pi / 9}, 2
+    )
+    names = [p.protocol_name for p in hits]
+    assert any("Duclos" in n for n in names), names
+    assert any("Campbell" in n and "O'Gorman" in n for n in names), names
+    assert all(p.qudit_dim == 2 for p in hits)
+    assert "Anderson-Jochym-O'Connor" in note
+
+
+def test_protocols_for_rnd_returns_research_note_with_ajoc_flag() -> None:
+    """Haar-random extensions are not exactly synthesisable; should return
+    empty protocol list AND surface the AJOC exclusion note at d=2."""
     hits, note = distillation.protocols_for_extension("rnd", {}, 2)
     assert hits == []
-    assert "Research may be needed" in note or "no catalog" in note.lower()
+    assert "Anderson-Jochym-O'Connor" in note
+    assert "Research may be needed" in note or "No catalog" in note
+
+
+def test_ajoc_excluded_qubit() -> None:
+    """AJOC helper: π/4 not excluded; non-π/4 angles are."""
+    ex, reason = distillation.ajoc_excluded("angle", {"theta": math.pi / 4}, 2)
+    assert ex is False
+    assert "Clifford hierarchy" in reason
+
+    ex, reason = distillation.ajoc_excluded("angle", {"theta": 2 * math.pi / 9}, 2)
+    assert ex is True
+    assert "Anderson-Jochym-O'Connor" in reason or "Clifford-hierarchy" in reason
+
+    ex, _ = distillation.ajoc_excluded("rnd", {}, 2)
+    assert ex is True
+
+
+def test_ajoc_not_applicable_at_qudit_dim_3() -> None:
+    """No AJOC-analogue for d≥3; helper returns False with an explanatory note."""
+    ex, reason = distillation.ajoc_excluded("angle", {"theta": 2 * math.pi / 9}, 3)
+    assert ex is False
+    assert "d≥3" in reason or "d=3" in reason or "classification" in reason
