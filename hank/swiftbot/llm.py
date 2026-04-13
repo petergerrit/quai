@@ -16,11 +16,12 @@ to override. No Fermilab GPT-SSO path yet (by design decision).
 """
 from __future__ import annotations
 
+import json
 import os
 from typing import Protocol, TypeVar, runtime_checkable
 
 import anthropic
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
@@ -87,10 +88,34 @@ class AnthropicLLM:
         )
         for block in resp.content:
             if getattr(block, "type", None) == "tool_use" and block.name == tool_name:
-                return output_model.model_validate(block.input)
+                return _validate_with_string_fallback(output_model, block.input)
         raise RuntimeError(
             f"LLM did not invoke tool {tool_name!r}; content={resp.content!r}"
         )
+
+
+def _validate_with_string_fallback(output_model: type[T], raw: dict) -> T:
+    """Pydantic-validate `raw`. If it fails, try to coerce any string fields
+    that look like JSON into parsed JSON and retry.
+
+    Works around a tool-use quirk where the model sometimes serialises list
+    or dict fields as JSON-encoded strings instead of native structures.
+    """
+    try:
+        return output_model.model_validate(raw)
+    except ValidationError:
+        if not isinstance(raw, dict):
+            raise
+        coerced = dict(raw)
+        for key, val in list(coerced.items()):
+            if isinstance(val, str):
+                stripped = val.lstrip()
+                if stripped.startswith("[") or stripped.startswith("{"):
+                    try:
+                        coerced[key] = json.loads(val)
+                    except json.JSONDecodeError:
+                        pass
+        return output_model.model_validate(coerced)
 
 
 class ScriptedLLM:
