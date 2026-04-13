@@ -1,0 +1,5 @@
+numpy>=1.26,<3
+scipy>=1.11,<2
+anthropic>=0.39,<1
+pydantic>=2.6,<3
+pytest>=8.0,<9

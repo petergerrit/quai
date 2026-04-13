@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import argparse
 from numpy.linalg import norm
+import os
 
 def equal(A, B, tol=1e-10):
     """Check if two matrices are equal up to tolerance"""
@@ -134,7 +135,8 @@ def main():
     print(f"Total unique words with {args.nt} T matrices: {len(words)}")
     
     # Save results
-    output_file = f"{args.file.replace('.npy', '')}_{args.tfile.replace('.npy', '')}_nt{args.nt}.npy"
+    output_file = f"{os.path.basename(args.file).replace('.npy', '')}_{os.path.basename(args.tfile).replace('.npy', '')}_nt{args.nt}.npy"
+    #output_file = f"{args.file.replace('.npy', '')}_{args.tfile.replace('.npy', '')}_nt{args.nt}.npy"
     words_array = np.array(words)
     np.save(output_file, words_array)
     print(f"Saved to {output_file}")

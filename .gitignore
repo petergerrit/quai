@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+
+# API keys / secrets (belt and suspenders)
+.env
+.env.*
+*.key
+**/key
+**/api_key
+**/api-key
+
+# SQLite (content-addressable; always regenerable)
+*.db
+*.db-wal
+*.db-shm
+
+# SWIFTbot runtime artefacts (regenerable from code + registered target families)
+hank/sweep_runs/
+hank/literature/paper_extracted/
+
+# Large clifford_t data directories (experimental outputs; > 1 GB total)
+hank/clifford_t/norm_data/
+hank/clifford_t/diag_data/
+hank/clifford_t/full_sets/
+hank/clifford_t/group+extension/
+hank/clifford_t/extensions/
+hank/clifford_t/testdata/
+hank/clifford_t/test_data/
+hank/clifford_t/groups/
+
+# qco sweep outputs (thousands of small per-run .txt files — regenerable from
+# the pipeline). If you want to preserve a specific snapshot, commit a
+# tarball under hank/snapshots/ instead.
+hank/qco-main/data_*/
+hank/qco-main_opt/data_*/
+hank/qco-main/qt_results*.txt
+hank/qco-main_opt/qt_results*.txt
+hank/qco-main/qcoG*.txt
+hank/qco-main_opt/qcoG*.txt
+
+# Paper-source tarball extraction (has own source in literature/*.tar.gz)
+hank/literature/paper_extracted/
+
+# Small zipped artefact of an earlier qco-main_opt snapshot
+hank/files.zip
+
+# Editor / OS
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+
+# Ad-hoc backups
+*.bak
+*.orig
