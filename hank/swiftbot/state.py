@@ -145,6 +145,30 @@ SynthesisCostMethod = Literal[
 ]
 
 
+ExtensionRegime = Literal[
+    "finite",                     # ⟨C, T⟩ closure terminates under classification bound
+    "universal_likely",           # closure exceeds bound AND base group Ad is irreducible
+    "infinite_but_not_dense",     # closure exceeds bound AND base group Ad is reducible
+    "unknown",                    # couldn't determine
+]
+
+
+class ExtensionVerdict(BaseModel):
+    """Classification of ⟨base_group, extension⟩ as finite / universal / reducible.
+
+    Produced by `swiftbot.stages.check_extension.extension_verdict`. Fills the
+    pipeline gap where the ordinary Stage-2 Sawicki test only looks at the base
+    group — this one considers the extended set as a whole.
+    """
+    regime: ExtensionRegime
+    d: int = Field(..., gt=0)
+    closure_size: int | None = None           # populated in 'finite' regime
+    identified_group: str | None = None       # canonical name if known; else None
+    commutant_dim: int | None = None          # of ⟨C,T⟩ if finite, of C if infinite
+    irreducible: bool | None = None
+    notes: str = ""
+
+
 class CoverageRecord(BaseModel):
     """Outcome of a target-family coverage evaluation — the Scope-B analogue
     of QTRecord, but for the specialised/non-universal regime.
