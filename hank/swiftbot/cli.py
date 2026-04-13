@@ -91,6 +91,10 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="BFS depth cap for coverage runs (default: 8).")
     sw.add_argument("--coverage-n-parametric", type=int, default=5,
                     help="Parametric-target samples per coverage run (default: 5).")
+    sw.add_argument("--workers", type=int, default=1,
+                    help=("Parallelise Stage-3 qco subprocesses across N threads "
+                          "(default 1 = serial; on lenore, --workers 8 cuts wall "
+                          "time ~7x without changing results)."))
 
     # cover — evaluate extension coverage against a registered TargetFamily.
     cv = sub.add_parser(
@@ -148,6 +152,10 @@ def _build_parser() -> argparse.ArgumentParser:
     cp.add_argument("--panel", default="lamm_d2",
                     choices=("lamm_d2",),
                     help="Pre-registered panel of extensions (default: lamm_d2).")
+    cp.add_argument("--workers", type=int, default=1,
+                    help=("Evaluate panel entries in parallel across N threads. "
+                          "Default 1 = serial; --workers 7 runs all lamm_d2 "
+                          "extensions concurrently."))
 
     # codes — browse the curated QEC-code + distillation catalog (no API needed).
     cd = sub.add_parser(
@@ -202,6 +210,7 @@ def main(argv: list[str] | None = None) -> int:
                 coverage_bases=tuple(args.coverage_bases.split(",")),
                 coverage_max_depth=args.coverage_depth,
                 coverage_n_parametric=args.coverage_n_parametric,
+                workers=args.workers,
             )
         # Summary table to stderr, full JSON to stdout (pipe-friendly).
         print(format_sweep_table(result), file=sys.stderr)
@@ -256,21 +265,45 @@ def main(argv: list[str] | None = None) -> int:
         if args.db is not None:
             cache_kwargs["path"] = args.db
 
-        records = []
-        with Cache(**cache_kwargs) as cache:
-            for name, T_matrix, spec in panel:
-                fp = extension_fingerprint(spec)
-                print(f"  running: {name}  (fingerprint={fp[:10]}…)", file=sys.stderr, flush=True)
-                rec = evaluate_coverage_by_name(
-                    args.base, T_matrix, args.family,
-                    max_depth=args.max_depth,
-                    n_parametric_samples=args.n_parametric,
-                    eps_hit=args.eps,
-                    max_unique=args.max_unique,
-                    cache=cache,
-                    ext_fingerprint=fp,
+        import threading
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        records: list[tuple[str, object]] = [(None, None)] * len(panel)  # preserve order
+        progress_lock = threading.Lock()
+        done = [0]
+        total = len(panel)
+
+        def _run_panel_entry(idx_name_mat_spec):
+            idx, (name, T_matrix, spec) = idx_name_mat_spec
+            fp = extension_fingerprint(spec)
+            rec = evaluate_coverage_by_name(
+                args.base, T_matrix, args.family,
+                max_depth=args.max_depth,
+                n_parametric_samples=args.n_parametric,
+                eps_hit=args.eps,
+                max_unique=args.max_unique,
+                cache=cache,
+                ext_fingerprint=fp,
+            )
+            records[idx] = (name, rec)
+            with progress_lock:
+                done[0] += 1
+                print(
+                    f"  [{done[0]}/{total}] {name}  mean={rec.mean_dist:.4f}  "
+                    f"hits={rec.hits_count}/{rec.n_targets}  "
+                    f"fingerprint={fp[:10]}…",
+                    file=sys.stderr, flush=True,
                 )
-                records.append((name, rec))
+
+        with Cache(**cache_kwargs) as cache:
+            items = list(enumerate(panel))
+            if args.workers <= 1:
+                for item in items:
+                    _run_panel_entry(item)
+            else:
+                with ThreadPoolExecutor(max_workers=args.workers) as pool:
+                    for _ in as_completed([pool.submit(_run_panel_entry, it) for it in items]):
+                        pass
 
         # Ranked table (sorted by mean_dist ascending).
         records_sorted = sorted(records, key=lambda r: r[1].mean_dist)

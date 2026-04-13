@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import math
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Literal
 
 import numpy as np
@@ -379,6 +381,7 @@ def sweep(
     coverage_bases: tuple[str, ...] = ("clifford",),
     coverage_max_depth: int = 8,
     coverage_n_parametric: int = 5,
+    workers: int = 1,
 ) -> SweepResult:
     """Full pipeline: explore groups (stage 1+2) then actually execute every
     proposed extension via qco-main_opt (stage 3).
@@ -387,6 +390,14 @@ def sweep(
     evaluation errors (e.g. howard_vala not implemented yet, or a qco timeout),
     its SweepEvaluation has `error` set and the sweep proceeds. This way a
     whole batch isn't lost to a single bad proposal.
+
+    `workers`: if > 1, evaluate the (group, extension) stage-3 tasks in
+    parallel using a ThreadPoolExecutor. Each qco subprocess releases the
+    GIL while waiting on I/O, so threads give near-full speedup. SQLite
+    WAL mode serialises writes to the cache, so there are no data races.
+    The returned `evaluations` list preserves submission order regardless
+    of worker count. Default workers=1 preserves the deterministic serial
+    path used in existing tests.
     """
     # Deferred import so stage-3 stays optional for tests that don't need it.
     from swiftbot.stages import s3_efficiency as s3
@@ -396,96 +407,119 @@ def sweep(
     llm = llm or AnthropicLLM()
 
     try:
-        _progress(f"[sweep] dim={dim}  t={t}  sample_size={sample_size}", verbose=verbose)
-        explore = run(dim, cache=cache, llm=llm, top_n=top_n, run_id=run_id)
-        evaluations: list[SweepEvaluation] = []
-        total = sum(
-            min(len(p.extensions), max_extensions_per_group or len(p.extensions))
-            for p in explore.proposals.values()
+        _progress(
+            f"[sweep] dim={dim}  t={t}  sample_size={sample_size}  workers={workers}",
+            verbose=verbose,
         )
-        done = 0
+        explore = run(dim, cache=cache, llm=llm, top_n=top_n, run_id=run_id)
 
         # Stage 4/5 lookups are deterministic and cheap; compute once per group.
         group_codes: dict[str, tuple[list[CodeRecord], str]] = {}
         for group_name in explore.proposals:
             group_codes[group_name] = codesmod.codes_for_group(group_name)
 
+        # Build an ordered list of work items. Each item is a (stable_index,
+        # group_name, ExtensionSpec) tuple so downstream code can place the
+        # SweepEvaluation at its original index regardless of completion order.
+        work_items: list[tuple[int, str, "ExtensionSpec"]] = []
         for group_name, proposal in explore.proposals.items():
             exts = proposal.extensions
             if max_extensions_per_group is not None:
                 exts = exts[:max_extensions_per_group]
+            for ext in exts:
+                work_items.append((len(work_items), group_name, ext))
+        total = len(work_items)
+
+        evaluations: list[SweepEvaluation | None] = [None] * total
+        progress_lock = threading.Lock()
+        done_counter = [0]
+
+        def _worker(item: tuple[int, str, "ExtensionSpec"]) -> None:
+            idx, group_name, ext = item
             codes_hits, codes_note = group_codes[group_name]
             qudit_dim = gmod.REGISTRY[group_name].d
-
-            for ext in exts:
-                done += 1
-                _progress(
-                    f"  [{done}/{total}] {group_name} + {ext.kind}({ext.params}) ...",
-                    verbose=verbose,
+            dist_hits, dist_note = distmod.protocols_for_extension(
+                ext.kind, ext.params, qudit_dim,
+            )
+            try:
+                records = s3.evaluate_extension(
+                    ext, group_name,
+                    t=t, sample_size=sample_size,
+                    cache=cache,
+                    timeout_s=timeout_s,
+                    verbose=False,
                 )
-                dist_hits, dist_note = distmod.protocols_for_extension(
-                    ext.kind, ext.params, qudit_dim,
+                qts = [r.qt for r in records if r.qt is not None]
+                best_qt = min(qts) if qts else None
+                deltas = [r.delta for r in records]
+                best_delta = min(deltas) if deltas else None
+                cov_records, cov_note = _maybe_run_coverage(
+                    ext, qudit_dim, coverage_bases, cache,
+                    enabled=include_coverage,
+                    max_depth=coverage_max_depth,
+                    n_parametric=coverage_n_parametric,
                 )
-                try:
-                    records = s3.evaluate_extension(
-                        ext, group_name,
-                        t=t, sample_size=sample_size,
-                        cache=cache,
-                        timeout_s=timeout_s,
-                        verbose=False,   # keep qco stdout out of our progress stream
-                    )
-                    qts = [r.qt for r in records if r.qt is not None]
-                    best_qt = min(qts) if qts else None
-                    deltas = [r.delta for r in records]
-                    best_delta = min(deltas) if deltas else None
-
-                    # Stage-B coverage against registered target families (optional).
-                    cov_records, cov_note = _maybe_run_coverage(
-                        ext, qudit_dim, coverage_bases, cache,
-                        enabled=include_coverage,
-                        max_depth=coverage_max_depth,
-                        n_parametric=coverage_n_parametric,
-                    )
-
-                    evaluations.append(SweepEvaluation(
-                        group_name=group_name,
-                        ext_kind=ext.kind,
-                        ext_params=ext.params,
-                        ext_rationale=ext.rationale,
-                        qt_records=records,
-                        best_qt=best_qt,
-                        best_delta=best_delta,
-                        codes_found=codes_hits,
-                        codes_note=codes_note,
-                        distillation_found=dist_hits,
-                        distillation_note=dist_note,
-                        coverage_records=cov_records,
-                        coverage_note=cov_note,
-                    ))
+                evaluations[idx] = SweepEvaluation(
+                    group_name=group_name,
+                    ext_kind=ext.kind,
+                    ext_params=ext.params,
+                    ext_rationale=ext.rationale,
+                    qt_records=records,
+                    best_qt=best_qt,
+                    best_delta=best_delta,
+                    codes_found=codes_hits,
+                    codes_note=codes_note,
+                    distillation_found=dist_hits,
+                    distillation_note=dist_note,
+                    coverage_records=cov_records,
+                    coverage_note=cov_note,
+                )
+                with progress_lock:
+                    done_counter[0] += 1
                     cov_summary = (
                         f", coverage={len(cov_records)} run(s)"
                         if include_coverage else ""
                     )
                     _progress(
-                        f"     → Q_T={best_qt!r}, δ={best_delta!r}, "
+                        f"  [{done_counter[0]}/{total}] {group_name} + "
+                        f"{ext.kind}({ext.params})  "
+                        f"→ Q_T={best_qt!r}, δ={best_delta!r}, "
                         f"codes={len(codes_hits)}, distillations={len(dist_hits)}"
                         f"{cov_summary}",
                         verbose=verbose,
                     )
-                except Exception as exc:
-                    msg = f"{type(exc).__name__}: {exc}"
-                    evaluations.append(SweepEvaluation(
-                        group_name=group_name,
-                        ext_kind=ext.kind,
-                        ext_params=ext.params,
-                        ext_rationale=ext.rationale,
-                        error=msg,
-                        codes_found=codes_hits,
-                        codes_note=codes_note,
-                        distillation_found=dist_hits,
-                        distillation_note=dist_note,
-                    ))
-                    _progress(f"     ✗ {msg}", verbose=verbose)
+            except Exception as exc:
+                msg = f"{type(exc).__name__}: {exc}"
+                evaluations[idx] = SweepEvaluation(
+                    group_name=group_name,
+                    ext_kind=ext.kind,
+                    ext_params=ext.params,
+                    ext_rationale=ext.rationale,
+                    error=msg,
+                    codes_found=codes_hits,
+                    codes_note=codes_note,
+                    distillation_found=dist_hits,
+                    distillation_note=dist_note,
+                )
+                with progress_lock:
+                    done_counter[0] += 1
+                    _progress(
+                        f"  [{done_counter[0]}/{total}] {group_name} + "
+                        f"{ext.kind}({ext.params})  ✗ {msg}",
+                        verbose=verbose,
+                    )
+
+        if workers <= 1:
+            for item in work_items:
+                _worker(item)
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                for _ in as_completed([pool.submit(_worker, item) for item in work_items]):
+                    pass
+
+        # By construction every slot has been filled; narrow the type.
+        final_evaluations: list[SweepEvaluation] = [e for e in evaluations if e is not None]
+        assert len(final_evaluations) == total, "worker dropped an evaluation"
 
         return SweepResult(
             dim=dim,
@@ -494,7 +528,7 @@ def sweep(
             selection=explore.selection,
             verdicts=explore.verdicts,
             proposals=explore.proposals,
-            evaluations=evaluations,
+            evaluations=final_evaluations,
         )
     finally:
         if owned_cache:

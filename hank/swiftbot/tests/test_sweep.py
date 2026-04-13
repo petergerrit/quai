@@ -175,6 +175,38 @@ def test_sweep_with_coverage_attaches_coverage_records(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.skipif(not s3.MAIN_PY.exists(), reason="qco-main_opt/main.py missing")
+def test_sweep_workers_produces_same_evaluation_set(tmp_path: Path) -> None:
+    """workers=1 and workers>1 must yield the same set of SweepEvaluations
+    (identical ordering, because _worker places results at their stable index)."""
+    selection = GroupSelection(selections=[
+        GroupPriority(name="hurwitz", rationale="tiny d=2 base for fast parallel test"),
+    ])
+    proposal = ExtensionProposal(extensions=[
+        ExtensionSpec(kind="rnd", params={}, rationale="A"),
+        ExtensionSpec(kind="angle", params={"theta": math.pi / 4}, rationale="B"),
+        ExtensionSpec(kind="rnd", params={}, rationale="C"),
+    ])
+
+    def _run(workers: int, db_name: str) -> list[tuple[str, str]]:
+        with Cache(tmp_path / db_name) as cache:
+            result = sweep(
+                dim=2, t=5, sample_size=1,
+                cache=cache, llm=ScriptedLLM([selection, proposal]),
+                top_n=1, timeout_s=60, verbose=False,
+                workers=workers,
+            )
+        return [(e.group_name, e.ext_kind) for e in result.evaluations]
+
+    serial   = _run(1, "serial.db")
+    parallel = _run(3, "parallel.db")
+
+    # Same (group, ext_kind) sequence — ordering is preserved by the stable index.
+    assert serial == parallel
+    assert len(serial) == 3
+    assert [p[1] for p in serial] == ["rnd", "angle", "rnd"]
+
+
 def test_format_sweep_table_handles_mixed_results() -> None:
     """format_sweep_table must gracefully handle both successful and failed
     evaluations, and sort by best_qt ascending (best first)."""
