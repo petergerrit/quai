@@ -202,6 +202,52 @@ def test_get_missing_qt_returns_none(tmp_path: Path) -> None:
 # Provenance sanity
 # ---------------------------------------------------------------------------
 
+def test_concurrent_writes_from_multiple_threads(tmp_path: Path) -> None:
+    """Regression: supervisor.sweep(workers>1) shares a Cache across threads.
+    Before the lock + check_same_thread=False fix, this raised ProgrammingError
+    ('SQLite objects created in a thread can only be used in that same thread')."""
+    import threading
+
+    from swiftbot.state import QTRecord, SawickiRecord
+
+    with Cache(tmp_path / "cache.db") as kb:
+        bi_key = kb.put_group(
+            np.asarray(gmod.get_group("BI")), name="BI", source="registry:BI",
+        )
+
+        errors: list[Exception] = []
+        errors_lock = threading.Lock()
+
+        def writer(i: int) -> None:
+            try:
+                kb.put_qt(QTRecord(
+                    target_key=bi_key, t=5, sample_id=i,
+                    delta=0.5, qt=2.0, q_opt=2.0,
+                    ext_fingerprint=f"fp-{i}",
+                ))
+            except Exception as e:
+                with errors_lock:
+                    errors.append(e)
+
+        threads = [threading.Thread(target=writer, args=(i,)) for i in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"concurrent writes errored: {errors[:3]}"
+        assert kb.count("qt_results") == 20
+
+        # Readers can also run from a different thread.
+        out: list[int] = []
+        read_thread = threading.Thread(
+            target=lambda: out.append(len(kb.list_qt(bi_key)))
+        )
+        read_thread.start()
+        read_thread.join()
+        assert out == [20]
+
+
 def test_rows_carry_provenance(tmp_path: Path) -> None:
     bi = np.asarray(gmod.get_group("BI"))
     with Cache(tmp_path / "cache.db", run_id="test-run") as kb:

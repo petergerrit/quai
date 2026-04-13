@@ -23,6 +23,7 @@ import json
 import socket
 import sqlite3
 import subprocess
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -204,10 +205,15 @@ class Cache:
         self.path = Path(path)
         self.run_id = run_id
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path))
+        # check_same_thread=False lets us share this connection across threads
+        # (needed for supervisor.sweep with workers>1). We serialise actual
+        # operations with self._lock below; WAL mode additionally serialises
+        # writes at the SQLite level across any number of connections.
+        self.conn = sqlite3.connect(str(self.path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode = WAL;")
         self.conn.execute("PRAGMA foreign_keys = ON;")
+        self._lock = threading.Lock()
         self._init_schema()
 
     def __enter__(self) -> "Cache":
@@ -234,9 +240,10 @@ class Cache:
 
     @property
     def schema_version(self) -> int:
-        row = self.conn.execute(
-            "SELECT value FROM schema_meta WHERE key = 'version'"
-        ).fetchone()
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT value FROM schema_meta WHERE key = 'version'"
+            ).fetchone()
         return int(row["value"]) if row else -1
 
     # -- groups ---------------------------------------------------------------
@@ -257,7 +264,7 @@ class Cache:
         key = matrices_key(arr, decimals=decimals)
         prov = current_provenance(run_id=self.run_id)
         blob = matrices_to_blob(arr)
-        with self.conn:
+        with self._lock, self.conn:
             self.conn.execute(
                 """INSERT OR IGNORE INTO groups (
                     group_key, name, d, size, source, projective, matrices_blob,
@@ -271,11 +278,12 @@ class Cache:
         return key
 
     def get_group(self, group_key: str) -> tuple[GroupRecord, np.ndarray] | None:
-        row = self.conn.execute(
-            """SELECT group_key, name, d, size, source, projective, matrices_blob
-               FROM groups WHERE group_key = ?""",
-            (group_key,),
-        ).fetchone()
+        with self._lock:
+            row = self.conn.execute(
+                """SELECT group_key, name, d, size, source, projective, matrices_blob
+                   FROM groups WHERE group_key = ?""",
+                (group_key,),
+            ).fetchone()
         if row is None:
             return None
         record = GroupRecord(
@@ -295,20 +303,22 @@ class Cache:
             sql += " WHERE d = ?"
             args = (d,)
         sql += " ORDER BY d, size, name"
+        with self._lock:
+            rows = list(self.conn.execute(sql, args))
         return [
             GroupRecord(
                 group_key=row["group_key"], name=row["name"], d=row["d"],
                 size=row["size"], source=row["source"],
                 projective=bool(row["projective"]),
             )
-            for row in self.conn.execute(sql, args)
+            for row in rows
         ]
 
     # -- sawicki --------------------------------------------------------------
 
     def put_sawicki(self, record: SawickiRecord) -> None:
         prov = current_provenance(run_id=self.run_id)
-        with self.conn:
+        with self._lock, self.conn:
             self.conn.execute(
                 """INSERT OR REPLACE INTO sawicki_results (
                     target_key, verdict, commutant_dim, irreducible,
@@ -324,12 +334,13 @@ class Cache:
             )
 
     def get_sawicki(self, target_key: str) -> SawickiRecord | None:
-        row = self.conn.execute(
-            """SELECT target_key, verdict, commutant_dim, irreducible,
-                      min_distance_to_center, has_near_center_element, notes
-               FROM sawicki_results WHERE target_key = ?""",
-            (target_key,),
-        ).fetchone()
+        with self._lock:
+            row = self.conn.execute(
+                """SELECT target_key, verdict, commutant_dim, irreducible,
+                          min_distance_to_center, has_near_center_element, notes
+                   FROM sawicki_results WHERE target_key = ?""",
+                (target_key,),
+            ).fetchone()
         if row is None:
             return None
         return SawickiRecord(
@@ -346,7 +357,7 @@ class Cache:
 
     def put_qt(self, record: QTRecord) -> None:
         prov = current_provenance(run_id=self.run_id)
-        with self.conn:
+        with self._lock, self.conn:
             self.conn.execute(
                 """INSERT OR REPLACE INTO qt_results (
                     target_key, t, sample_id, ext_fingerprint,
@@ -368,18 +379,27 @@ class Cache:
         *,
         ext_fingerprint: str = "",
     ) -> QTRecord | None:
-        row = self.conn.execute(
-            """SELECT target_key, t, sample_id, ext_fingerprint,
-                      delta, qt, q_opt, source_file
-               FROM qt_results
-               WHERE target_key = ? AND t = ? AND sample_id = ? AND ext_fingerprint = ?""",
-            (target_key, t, sample_id, ext_fingerprint),
-        ).fetchone()
+        with self._lock:
+            row = self.conn.execute(
+                """SELECT target_key, t, sample_id, ext_fingerprint,
+                          delta, qt, q_opt, source_file
+                   FROM qt_results
+                   WHERE target_key = ? AND t = ? AND sample_id = ? AND ext_fingerprint = ?""",
+                (target_key, t, sample_id, ext_fingerprint),
+            ).fetchone()
         if row is None:
             return None
         return QTRecord(**{k: row[k] for k in row.keys()})
 
     def list_qt(self, target_key: str) -> list[QTRecord]:
+        with self._lock:
+            rows = list(self.conn.execute(
+                """SELECT target_key, t, sample_id, ext_fingerprint,
+                          delta, qt, q_opt, source_file
+                   FROM qt_results WHERE target_key = ?
+                   ORDER BY t, sample_id, ext_fingerprint""",
+                (target_key,),
+            ))
         return [
             QTRecord(
                 target_key=row["target_key"], t=row["t"],
@@ -389,13 +409,7 @@ class Cache:
                 qt=row["qt"], q_opt=row["q_opt"],
                 source_file=row["source_file"],
             )
-            for row in self.conn.execute(
-                """SELECT target_key, t, sample_id, ext_fingerprint,
-                          delta, qt, q_opt, source_file
-                   FROM qt_results WHERE target_key = ?
-                   ORDER BY t, sample_id, ext_fingerprint""",
-                (target_key,),
-            )
+            for row in rows
         ]
 
     # -- coverage -------------------------------------------------------------
@@ -405,7 +419,7 @@ class Cache:
         per_target_json = json.dumps(
             [pt.model_dump() for pt in record.per_target], separators=(",", ":"),
         )
-        with self.conn:
+        with self._lock, self.conn:
             self.conn.execute(
                 """INSERT OR REPLACE INTO coverage_results (
                     base_group_key, ext_fingerprint, target_family_name, max_depth,
@@ -454,12 +468,13 @@ class Cache:
         target_family_name: str,
         max_depth: int,
     ) -> CoverageRecord | None:
-        row = self.conn.execute(
-            """SELECT * FROM coverage_results
-               WHERE base_group_key = ? AND ext_fingerprint = ?
-                 AND target_family_name = ? AND max_depth = ?""",
-            (base_group_key, ext_fingerprint, target_family_name, max_depth),
-        ).fetchone()
+        with self._lock:
+            row = self.conn.execute(
+                """SELECT * FROM coverage_results
+                   WHERE base_group_key = ? AND ext_fingerprint = ?
+                     AND target_family_name = ? AND max_depth = ?""",
+                (base_group_key, ext_fingerprint, target_family_name, max_depth),
+            ).fetchone()
         if row is None:
             return None
         return self._row_to_coverage(row)
@@ -481,12 +496,15 @@ class Cache:
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += " ORDER BY mean_dist ASC"
-        return [self._row_to_coverage(row) for row in self.conn.execute(sql, tuple(args))]
+        with self._lock:
+            rows = list(self.conn.execute(sql, tuple(args)))
+        return [self._row_to_coverage(row) for row in rows]
 
     # -- misc -----------------------------------------------------------------
 
     def count(self, table: str) -> int:
-        row = self.conn.execute(
-            f"SELECT COUNT(*) AS n FROM {table}"
-        ).fetchone()
+        with self._lock:
+            row = self.conn.execute(
+                f"SELECT COUNT(*) AS n FROM {table}"
+            ).fetchone()
         return int(row["n"])
