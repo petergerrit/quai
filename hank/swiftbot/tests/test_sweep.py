@@ -135,6 +135,30 @@ def test_sweep_respects_max_extensions_per_group(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not s3.MAIN_PY.exists(), reason="qco-main_opt/main.py missing")
+def test_sweep_attaches_extension_verdict_to_each_evaluation(tmp_path: Path) -> None:
+    """Every evaluation should carry an ExtensionVerdict unless the extension
+    is 'rnd' or the dimension lacks a classification bound."""
+    selection = GroupSelection(selections=[
+        GroupPriority(name="hurwitz", rationale="fastest d=2 base for integration test"),
+    ])
+    proposal = ExtensionProposal(extensions=[
+        ExtensionSpec(kind="angle", params={"theta": math.pi / 4},
+                      rationale="Clifford+T-like → universal_likely"),
+        ExtensionSpec(kind="angle", params={"theta": math.pi / 2},
+                      rationale="S-gate already in Clifford → finite"),
+    ])
+    llm = ScriptedLLM([selection, proposal])
+    with Cache(tmp_path / "cache.db") as cache:
+        result = sweep(
+            dim=2, t=5, sample_size=1, cache=cache, llm=llm, top_n=1,
+            timeout_s=60, verbose=False,
+        )
+    regimes = [ev.verdict.regime for ev in result.evaluations if ev.verdict is not None]
+    # One of the extensions should land in 'finite', the other in 'universal_likely'
+    assert set(regimes) == {"finite", "universal_likely"}
+
+
+@pytest.mark.skipif(not s3.MAIN_PY.exists(), reason="qco-main_opt/main.py missing")
 def test_sweep_with_coverage_attaches_coverage_records(tmp_path: Path) -> None:
     """include_coverage=True populates SweepEvaluation.coverage_records with
     one CoverageRecord per (base × registered-family-at-matching-dim) pair."""

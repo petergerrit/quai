@@ -36,6 +36,7 @@ from swiftbot.state import (
     CodeRecord,
     CoverageRecord,
     DistillationRecord,
+    ExtensionVerdict,
     QTRecord,
     SawickiRecord,
 )
@@ -305,6 +306,7 @@ class SweepEvaluation(BaseModel):
     distillation_note: str = ""
     coverage_records: list[CoverageRecord] = Field(default_factory=list)
     coverage_note: str = ""
+    verdict: ExtensionVerdict | None = None
 
 
 class SweepResult(BaseModel):
@@ -441,6 +443,9 @@ def sweep(
             dist_hits, dist_note = distmod.protocols_for_extension(
                 ext.kind, ext.params, qudit_dim,
             )
+            # Extension verdict (finite vs universal vs reducible) — see
+            # swiftbot.stages.check_extension. Non-fatal if it fails.
+            verdict = _compute_extension_verdict(ext, group_name, qudit_dim)
             try:
                 records = s3.evaluate_extension(
                     ext, group_name,
@@ -473,6 +478,7 @@ def sweep(
                     distillation_note=dist_note,
                     coverage_records=cov_records,
                     coverage_note=cov_note,
+                    verdict=verdict,
                 )
                 with progress_lock:
                     done_counter[0] += 1
@@ -500,6 +506,7 @@ def sweep(
                     codes_note=codes_note,
                     distillation_found=dist_hits,
                     distillation_note=dist_note,
+                    verdict=verdict,
                 )
                 with progress_lock:
                     done_counter[0] += 1
@@ -533,6 +540,33 @@ def sweep(
     finally:
         if owned_cache:
             cache.close()
+
+
+def _compute_extension_verdict(
+    ext: "ExtensionSpec",
+    group_name: str,
+    qudit_dim: int,
+) -> ExtensionVerdict | None:
+    """Best-effort ExtensionVerdict for ⟨group, extension⟩. Returns None if
+    the extension can't be materialized (e.g. rnd) or the dimension lacks
+    a classification bound."""
+    from swiftbot.stages.check_extension import CLASSIFICATION_BOUND, extension_verdict
+    from swiftbot.stages.s3_efficiency import materialize_extension
+
+    if qudit_dim not in CLASSIFICATION_BOUND:
+        return None
+    try:
+        T_matrix = materialize_extension(ext, qudit_dim)
+    except Exception:
+        return None
+    if T_matrix is None:
+        # 'rnd' extensions aren't a fixed matrix; skip.
+        return None
+    try:
+        base_closure = np.asarray(gmod.get_group(group_name))
+        return extension_verdict(base_closure, T_matrix, qudit_dim)
+    except Exception:
+        return None
 
 
 def _maybe_run_coverage(
@@ -603,7 +637,8 @@ def format_sweep_table(result: SweepResult) -> str:
     lines.append("-" * len(header))
     lines.append(
         f"{'group':<12} {'ext_kind':<12} {'best Q_T':>10}  {'best δ':>8}  "
-        f"{'codes':>5}  {'dist':>4}  {'cov_best_μd':>11}  {'cov_hits':>9}  status"
+        f"{'codes':>5}  {'dist':>4}  {'cov_best_μd':>11}  {'cov_hits':>9}  "
+        f"{'verdict':<24}  status"
     )
     for e in rows:
         status = "ok" if e.error is None else f"ERR: {e.error}"
@@ -616,9 +651,17 @@ def format_sweep_table(result: SweepResult) -> str:
         else:
             cov_s = "      —"
             hits_s = "    —"
+        if e.verdict is not None:
+            regime = e.verdict.regime
+            if e.verdict.regime == "finite":
+                verdict_s = f"finite(n={e.verdict.closure_size})"
+            else:
+                verdict_s = regime
+        else:
+            verdict_s = "—"
         lines.append(
             f"{e.group_name:<12} {e.ext_kind:<12} {qt_s:>10}  {dl_s:>8}  "
             f"{len(e.codes_found):>5}  {len(e.distillation_found):>4}  "
-            f"{cov_s:>11}  {hits_s:>9}  {status}"
+            f"{cov_s:>11}  {hits_s:>9}  {verdict_s:<24}  {status}"
         )
     return "\n".join(lines)
