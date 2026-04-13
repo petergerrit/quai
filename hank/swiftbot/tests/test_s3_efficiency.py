@@ -105,6 +105,21 @@ def test_materialize_howard_vala_matches_paper_eq27() -> None:
     assert np.allclose(M, expected, atol=1e-10)
 
 
+def test_materialize_howard_vala_accepts_primed_param_names() -> None:
+    """The paper uses primed symbols z', γ', ε; LLMs often emit them as
+    z_prime / gamma_prime / epsilon. Both naming styles should produce
+    identical matrices."""
+    short = ExtensionSpec(kind="howard_vala",
+                          params={"z": 1, "gamma": 2, "eps": 0}, rationale="")
+    primed = ExtensionSpec(kind="howard_vala",
+                           params={"z_prime": 1, "gamma_prime": 2, "epsilon": 0},
+                           rationale="")
+    assert np.allclose(
+        s3.materialize_extension(short, d=3),
+        s3.materialize_extension(primed, d=3),
+    )
+
+
 def test_materialize_howard_vala_rejects_non_prime_d() -> None:
     spec = ExtensionSpec(kind="howard_vala", params={"z": 1}, rationale="")
     with pytest.raises(ValueError, match="prime"):

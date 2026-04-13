@@ -104,9 +104,18 @@ def materialize_extension(spec: ExtensionSpec, d: int) -> np.ndarray | None:
             raise ValueError(f"mat: shape {M.shape} ≠ ({d},{d})")
         return _normalize_sud(M)
     if spec.kind == "howard_vala":
-        z = int(spec.params.get("z", 1))
-        gamma = int(spec.params.get("gamma", 1))
-        eps = int(spec.params.get("eps", 0))
+        # Accept several naming conventions the LLM might emit.
+        # Paper uses primed symbols (z', γ', ε); LLMs often translate those
+        # to z_prime / gamma_prime / epsilon. Also accept the short form.
+        p = spec.params
+        if "z_prime" in p or "gamma_prime" in p or "epsilon" in p:
+            z = int(p.get("z_prime", p.get("z", 1)))
+            gamma = int(p.get("gamma_prime", p.get("gamma", 1)))
+            eps = int(p.get("epsilon", p.get("eps", 0)))
+        else:
+            z = int(p.get("z", 1))
+            gamma = int(p.get("gamma", 1))
+            eps = int(p.get("eps", 0))
         return materialize_howard_vala(d, z=z, gamma=gamma, eps=eps)
     raise ValueError(f"unknown extension kind {spec.kind!r}")
 
