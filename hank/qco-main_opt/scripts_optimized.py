@@ -9,12 +9,15 @@ from __future__ import annotations
 
 from functools import cmp_to_key
 import gc
+import hashlib
 import math
 import os
+import pickle
 import random
 import signal
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 from scipy.linalg import eigh, svdvals, norm
@@ -22,6 +25,50 @@ from scipy import sparse
 
 from consts import *
 from dataStructures import *
+
+# Bump when a code change would invalidate on-disk Pi(g) caches.
+PI_CACHE_SCHEMA_VERSION = 1
+
+
+def _f_gates_fingerprint(f_gates: list) -> str:
+    """Stable short hash of a list of d×d unitary matrices (order-sensitive)."""
+    h = hashlib.sha256()
+    for g in f_gates:
+        arr = np.round(np.asarray(g, dtype=complex), 12)
+        h.update(arr.tobytes())
+        h.update(str(arr.shape).encode())
+    return h.hexdigest()[:16]
+
+
+def _pi_cache_file(cache_dir: Path, fingerprint: str, weight_tuple: tuple) -> Path:
+    w = "-".join(str(int(x)) for x in weight_tuple)
+    return cache_dir / f"v{PI_CACHE_SCHEMA_VERSION}_{fingerprint}_w{w}.pkl"
+
+
+def _load_pi_list(path: Path, expected_len: int):
+    if not path.exists():
+        return None
+    try:
+        with open(path, "rb") as f:
+            obj = pickle.load(f)
+    except (pickle.UnpicklingError, EOFError, OSError):
+        return None
+    if not isinstance(obj, list) or len(obj) != expected_len:
+        return None
+    return obj
+
+
+def _save_pi_list(path: Path, pi_list: list) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        with open(tmp, "wb") as f:
+            pickle.dump(pi_list, f, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(tmp, path)  # atomic on POSIX
+    except OSError:
+        # Best-effort: if we can't write the cache, that's fine — we already
+        # computed Pi(g) in memory, just don't persist.
+        tmp.unlink(missing_ok=True)
 
 # Use optimized representations
 from representation_optimized import (
@@ -309,13 +356,26 @@ def sample_norms_optimized(sample_size, n_of_generators, d=2, v='0.0.0',
     fixed_gate_matrix: str | None = None,
     batch_size: int = 50,
     progress_interval: int = 10,
+    base_rep_cache: bool = True,
+    base_rep_cache_max_dim: int = 512,
+    pi_cache_dir: str | None = None,
     **kwargs):
     """
     Optimized version of sample_norms with batched representation processing.
-    
+
     Additional args:
         batch_size: Number of representations to keep in memory at once
         progress_interval: How often to print progress (in samples)
+        base_rep_cache: If True (default), cache Π(g) per base group element to
+            exploit Π(g·rg·g†) = Π(g)·Π(rg)·Π(g)†. Replaces |G| expm calls per
+            sample with 1 expm + |G| sparse matmuls (~5-10× per-sample speedup).
+            Only active when from_file=True (i.e., a base group .txt is given).
+        base_rep_cache_max_dim: Per-weight dim cutoff for the cache; weights
+            with Pi.dim above this fall back to the direct path to bound memory.
+        pi_cache_dir: If set (path or env var $QCO_PI_CACHE_DIR), persist Π(g)
+            lists to disk keyed by a hash of f_gates and the weight tuple.
+            Panels sweeping many extensions against the same base group then
+            only pay the Π(g) build cost once, even across subprocesses.
     """
     comm = None
     rank = 0
@@ -329,6 +389,13 @@ def sample_norms_optimized(sample_size, n_of_generators, d=2, v='0.0.0',
 
     sample_size = int(sample_size)
     batch_size = int(batch_size)
+    # Coerce CLI-string kwargs (read_options always passes strings) to native types.
+    if isinstance(base_rep_cache, str):
+        base_rep_cache = base_rep_cache.strip().lower() not in ("0", "false", "no", "")
+    base_rep_cache_max_dim = int(base_rep_cache_max_dim)
+    if pi_cache_dir is None:
+        pi_cache_dir = os.environ.get("QCO_PI_CACHE_DIR") or None
+    _pi_cache_dir: Path | None = Path(pi_cache_dir).expanduser() if pi_cache_dir else None
 
     Gs_slice = [int(x) for x in n_of_generators.split('-')]
     if len(Gs_slice) > 1:
@@ -507,6 +574,22 @@ def sample_norms_optimized(sample_size, n_of_generators, d=2, v='0.0.0',
     my_N = (sample_size - rest) // size
     my_N += int(rank < rest)
 
+    # Conjugation-invariance cache: maps weight tuple -> [Pi(g) for g in f_gates].
+    # When from_file=True, every gate has the form g·rg·g† and Π is a group hom,
+    # so Π(g·rg·g†) = Π(g)·Π(rg)·Π(g)†. Caching Π(g) once per weight reduces the
+    # per-sample cost from |f_gates| expm calls to 1 expm + |f_gates| matmuls.
+    #
+    # In-memory cache activates when my_N >= 2 (amortization needed). With a
+    # disk cache (_pi_cache_dir set), even my_N == 1 wins after the first
+    # invocation on that (base group, weight) — so enable for any sample count.
+    _use_conj_cache = bool(base_rep_cache) and from_file and (
+        my_N >= 2 or _pi_cache_dir is not None
+    )
+    _pi_g_cache: dict = {}
+    _f_gates_hash = _f_gates_fingerprint(f_gates) if _use_conj_cache else None
+    if rank == 0 and _use_conj_cache and _pi_cache_dir is not None:
+        print(f"Pi(g) disk cache: {_pi_cache_dir} (fingerprint {_f_gates_hash})")
+
     # Initialize data structures
     datas = {}
     for symmetry in symmetries:
@@ -531,18 +614,21 @@ def sample_norms_optimized(sample_size, n_of_generators, d=2, v='0.0.0',
                   f"Rate: {rate:.2f} samples/s")
 
         ops = {s: [[] for _ in n_of_generators] for s in symmetries}
-        gates = []
         Gmax = max(n_of_generators)
-        
+
         if fixed_gate is not None:
             random_gates = [fixed_gate] * Gmax
         else:
             random_gates = [get_random_SU(d, gate_order) for _ in range(Gmax)]
 
-        if from_file:
+        # Materialize the dense g·rg·g† list only when we won't use the
+        # conjugation cache; the cached path never touches it.
+        gates: list = []
+        if from_file and not _use_conj_cache:
             gates = [g @ rg @ g.conjugate().T for rg in random_gates for g in f_gates]
-        else:
-            gates = random_gates
+        elif not from_file:
+            gates = list(random_gates)
+        total_gates = Gmax * len(f_gates) if from_file else Gmax
 
         try:
             # Process representations in batches
@@ -553,9 +639,33 @@ def sample_norms_optimized(sample_size, n_of_generators, d=2, v='0.0.0',
                 build_time = time.time() - flag
                 times[REP_BUILD] += build_time
 
-                # Apply representation to gates
+                # Apply representation to gates.
                 flag = time.time()
-                repr_of_gates = [Pi(gate) for gate in gates]
+                if (_use_conj_cache and Pi.dim <= base_rep_cache_max_dim):
+                    # Conjugation pathway: Π(g·rg·g†) = Π(g)·Π(rg)·Π(g)†.
+                    # Three-tier cache: in-memory → disk → compute.
+                    wkey = tuple(int(x) for x in weight)
+                    Pi_g_list = _pi_g_cache.get(wkey)
+                    if Pi_g_list is None and _pi_cache_dir is not None:
+                        path = _pi_cache_file(_pi_cache_dir, _f_gates_hash, wkey)
+                        Pi_g_list = _load_pi_list(path, expected_len=len(f_gates))
+                        if Pi_g_list is not None:
+                            _pi_g_cache[wkey] = Pi_g_list
+                    if Pi_g_list is None:
+                        Pi_g_list = [Pi(g) for g in f_gates]
+                        _pi_g_cache[wkey] = Pi_g_list
+                        if _pi_cache_dir is not None:
+                            _save_pi_list(
+                                _pi_cache_file(_pi_cache_dir, _f_gates_hash, wkey),
+                                Pi_g_list,
+                            )
+                    repr_of_gates = []
+                    for rg in random_gates:
+                        Pi_rg = Pi(rg)
+                        for Pi_g in Pi_g_list:
+                            repr_of_gates.append(Pi_g @ Pi_rg @ Pi_g.conjugate().T)
+                else:
+                    repr_of_gates = [Pi(gate) for gate in gates]
                 rep_time = time.time() - flag
                 times[REP] += rep_time
 
@@ -567,10 +677,11 @@ def sample_norms_optimized(sample_size, n_of_generators, d=2, v='0.0.0',
                 # Compute norms for each generator count
                 for j, G in enumerate(n_of_generators):
                     if from_file:
-                        tmp_gates = repr_of_gates[:1 + G * (len(gates) - 1) // len(random_gates)]
+                        n_tmp = 1 + G * (total_gates - 1) // Gmax
                     else:
-                        tmp_gates = repr_of_gates[:G * len(gates) // len(random_gates)]
-                    
+                        n_tmp = G * total_gates // Gmax
+                    tmp_gates = repr_of_gates[:n_tmp]
+
                     T = sum(tmp_gates) / len(tmp_gates)
 
                     flag = time.time()
@@ -669,6 +780,8 @@ def sample_norms_optimized(sample_size, n_of_generators, d=2, v='0.0.0',
 
     # Clear cache at end
     rep_cache.clear()
+    _pi_g_cache.clear()
+    gc.collect()
 
     if rank == 0 and not exception_raised:
         print('\nComputation completed.')

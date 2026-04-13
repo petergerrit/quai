@@ -72,7 +72,7 @@ _CODES: list[CodeRecord] = [
         n=7, k=2, distance=3, qudit_dim=2,
         transversal_groups=["BI"],
         stabilizer=False,
-        reference="Kubischta, arXiv:2307.13123 (par.nsf.gov/10505830)",
+        reference="Kubischta & Teixeira, PRL 131, 240601 (2023) [arXiv:2305.07023]",
         notes="Nonadditive quantum code with transversal binary icosahedral group 2I = 120.",
     ),
     CodeRecord(
@@ -80,7 +80,7 @@ _CODES: list[CodeRecord] = [
         n=None, k=None, distance=None, qudit_dim=2,
         transversal_groups=["BO"],
         stabilizer=False,
-        reference="Kubischta, arXiv:2307.13123",
+        reference="Kubischta & Teixeira, arXiv:2305.07023 (and related work)",
         notes=(
             "Family admitting transversal binary octahedral 2O = 48 action. "
             "Parameters (n,k,d) family-dependent; see paper for specific instances."

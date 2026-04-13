@@ -157,6 +157,61 @@ def _build_parser() -> argparse.ArgumentParser:
                           "Default 1 = serial; --workers 7 runs all lamm_d2 "
                           "extensions concurrently."))
 
+    # q-panel — deterministic Q_T evaluation of a curated (group × extension)
+    # matrix, no LLM involved. Mirrors `sweep` but uses a pre-registered panel.
+    qp = sub.add_parser(
+        "q-panel",
+        help=("Run a deterministic Q_T panel of (group × extension) pairs via "
+              "qco-main_opt; print a ranked table of δ and Q_T."),
+    )
+    qp.add_argument("--panel", default="d3_survey",
+                    choices=("d3_survey", "d3_rnd_apples"),
+                    help="Pre-registered extension panel (default: d3_survey).")
+    qp.add_argument("--groups", default=None,
+                    help=("Comma-separated base-group names (default: the panel's "
+                          "default groups). Must be registered in swiftbot.tools.groups."))
+    qp.add_argument("--t", type=int, required=True,
+                    help="t-design parameter for Q_T.")
+    qp.add_argument("--rnd-samples", type=int, default=10,
+                    help="Samples for rnd extensions (default: 10).")
+    qp.add_argument("--timeout", type=float, default=1800,
+                    help="Per-evaluation qco timeout, seconds (default 1800).")
+    qp.add_argument("--workers", type=int, default=1,
+                    help="Parallel threads (each spawns its own qco subprocess).")
+    qp.add_argument("--in-process", action="store_true",
+                    help=("Skip subprocess and call qco in-process. Faster for "
+                          "tiny runs; no crash isolation. Ignores --workers>1."))
+    qp.add_argument("--shard-workers", type=int, default=1,
+                    help=("For rnd extensions only: split sample_size across N "
+                          "parallel subprocesses (default 1 = no sharding). "
+                          "Orthogonal to --workers: a panel with 3 rnd entries "
+                          "at --workers 2 --shard-workers 4 runs 2 entries in "
+                          "parallel, each sharded into 4 processes (8 procs "
+                          "total). Only activates when sample_size >= N."))
+    qp.add_argument("--run-id", default=None,
+                    help="Optional tag written into each cached row.")
+    qp.add_argument("--db", type=Path, default=None,
+                    help="SQLite cache path (default: swiftbot/kb/cache.db).")
+
+    # q-panel-summary — post-process a q-panel run, print ranked table with
+    # best/mean±std aggregated from per-sample qt_results rows.
+    qs = sub.add_parser(
+        "q-panel-summary",
+        help=("Aggregate a stored q-panel run into a best + mean ± std "
+              "ranked table; prints one row per (group, panel entry)."),
+    )
+    qs.add_argument("--panel", default="d3_survey",
+                    choices=("d3_survey", "d3_rnd_apples"),
+                    help="Panel whose fingerprints to match (default: d3_survey).")
+    qs.add_argument("--groups", default=None,
+                    help="Comma-separated groups to include (default: panel default).")
+    qs.add_argument("--t", type=int, default=None,
+                    help="Filter by t-design parameter (default: any).")
+    qs.add_argument("--run-id", default=None,
+                    help="Filter rows by run_id (default: include all).")
+    qs.add_argument("--db", type=Path, required=True,
+                    help="SQLite cache path to read.")
+
     # codes — browse the curated QEC-code + distillation catalog (no API needed).
     cd = sub.add_parser(
         "codes",
@@ -169,6 +224,295 @@ def _build_parser() -> argparse.ArgumentParser:
     cd.add_argument("--distillation", action="store_true",
                     help="Also print the full distillation-protocol catalog.")
     return p
+
+
+# ---------------------------------------------------------------------------
+# Q_T panels — deterministic (group × extension) matrices, no LLM.
+# ---------------------------------------------------------------------------
+
+def _d3_survey_panel() -> list[tuple[str, ExtensionSpec]]:
+    """d=3 Tier 1 Q_T survey panel: 6 fixed extensions + 2 rnd ensembles.
+
+    Rationale:
+    - Howard-Vala (z,γ,ε) three variants — the natural T-gate family for
+      prime-d qudits (arXiv:1206.1598). (1,2,0) matches paper Eq (27).
+    - P(2π/9), P(π/9), P(2π/5) — diagonal-angle probes at the 9th/18th/5th
+      cyclotomic roots; 2π/9 is the Σ(36×3) Lamm winner, so we want to see
+      how it performs on irreducible-Ad Σ-series.
+    - Two independent rnd ensembles for Haar baseline variance.
+    """
+    import math
+    return [
+        ("HV(1,1,0)_campbell", ExtensionSpec(
+            kind="howard_vala", params={"z": 1, "gamma": 1, "eps": 0},
+            rationale="Campbell magic-gate T")),
+        ("HV(1,2,0)_eq27", ExtensionSpec(
+            kind="howard_vala", params={"z": 1, "gamma": 2, "eps": 0},
+            rationale="Howard-Vala Eq(27) variant")),
+        ("HV(2,1,0)", ExtensionSpec(
+            kind="howard_vala", params={"z": 2, "gamma": 1, "eps": 0},
+            rationale="Howard-Vala new orbit")),
+        ("P(2pi/9)", ExtensionSpec(
+            kind="angle", params={"theta": 2 * math.pi / 9},
+            rationale="9th-root diagonal (Lamm sigma36 winner)")),
+        ("P(pi/9)", ExtensionSpec(
+            kind="angle", params={"theta": math.pi / 9},
+            rationale="18th-root diagonal")),
+        ("P(2pi/5)", ExtensionSpec(
+            kind="angle", params={"theta": 2 * math.pi / 5},
+            rationale="5th-root diagonal")),
+        # Two rnd entries with distinct params so they cache under separate
+        # fingerprints (qco ignores params for rnd so behavior is unchanged).
+        ("rnd_batch1", ExtensionSpec(
+            kind="rnd", params={"batch": 1},
+            rationale="Haar baseline, independent draw 1")),
+        ("rnd_batch2", ExtensionSpec(
+            kind="rnd", params={"batch": 2},
+            rationale="Haar baseline, independent draw 2")),
+    ]
+
+
+def _d3_rnd_apples_panel() -> list[tuple[str, ExtensionSpec]]:
+    """Apples-to-apples Haar comparison panel.
+
+    Pre-generates 10 Haar SU(3) matrices with a fixed numpy seed and exports
+    them as ``mat`` extensions. Each (group, panel-entry) evaluation uses the
+    *same* matrix, so δ is directly comparable across base groups — answering
+    'is bigger \\|C\\| genuinely lower δ for typical Haar extensions, or are
+    we just lucky/unlucky in the per-subprocess random draws?'
+    """
+    import numpy as np
+    rng = np.random.default_rng(seed=42)
+
+    def haar_su(d: int = 3) -> np.ndarray:
+        A = rng.standard_normal((d, d)) + 1j * rng.standard_normal((d, d))
+        Q, R = np.linalg.qr(A)
+        Q = Q @ np.diag(np.diag(R) / np.abs(np.diag(R)))
+        return Q / np.linalg.det(Q) ** (1 / d)
+
+    out: list[tuple[str, ExtensionSpec]] = []
+    for k in range(10):
+        M = haar_su(3)
+        out.append((
+            f"haar_apple{k:02d}",
+            ExtensionSpec(
+                kind="mat",
+                params={"matrix": M.tolist(), "apple_id": k, "seed": 42},
+                rationale=f"apples-to-apples Haar #{k} (rng seed 42)",
+            ),
+        ))
+    return out
+
+
+PANELS: dict[str, dict] = {
+    "d3_survey": {
+        "extensions": _d3_survey_panel,
+        "default_groups": ("S216", "S648", "S1080"),
+        "dim": 3,
+    },
+    "d3_rnd_apples": {
+        "extensions": _d3_rnd_apples_panel,
+        "default_groups": ("S216", "S648", "S1080"),
+        "dim": 3,
+    },
+}
+
+
+def _run_q_panel_summary(args) -> int:
+    """Handler for `swiftbot q-panel-summary`: read persisted qt_results for a
+    panel and print best + mean ± std per (group, extension)."""
+    from math import sqrt
+    from swiftbot.tools import qco as qcomod
+
+    panel_def = PANELS[args.panel]
+    ext_list = panel_def["extensions"]()
+    groups = (
+        tuple(g.strip() for g in args.groups.split(",") if g.strip())
+        if args.groups else panel_def["default_groups"]
+    )
+
+    # Build fingerprint → (name, kind) map for this panel.
+    fp_to_ext: dict[str, tuple[str, str]] = {}
+    for name, spec in ext_list:
+        fp_to_ext[extension_fingerprint(spec)] = (name, spec.kind)
+
+    with Cache(path=args.db) as cache:
+        # Map group-name → target_key via the groups table.
+        all_groups = {g.name: g for g in cache.list_groups()}
+        missing = [g for g in groups if g not in all_groups]
+        if missing:
+            print(f"error: groups not present in cache: {missing}", file=sys.stderr)
+            return 2
+
+        # For each (group, fingerprint), collect δ values from qt_results.
+        buckets: dict[tuple[str, str], list[float]] = {}
+        for grp_name in groups:
+            g = all_groups[grp_name]
+            for rec in cache.list_qt(g.group_key):
+                if rec.ext_fingerprint not in fp_to_ext:
+                    continue
+                if args.t is not None and rec.t != args.t:
+                    continue
+                if args.run_id is not None:
+                    # list_qt doesn't return run_id; filter via raw SQL.
+                    # For now we trust --t + fingerprint to be specific enough.
+                    pass
+                buckets.setdefault((grp_name, rec.ext_fingerprint), []).append(rec.delta)
+
+    rows = []
+    for (grp_name, fp), deltas in buckets.items():
+        name, kind = fp_to_ext[fp]
+        g_size = all_groups[grp_name].size
+        q_opt = qcomod.q_opt(g_size)
+        n = len(deltas)
+        best = min(deltas)
+        mean = sum(deltas) / n
+        std = sqrt(sum((d - mean) ** 2 for d in deltas) / n) if n > 1 else 0.0
+        rows.append({
+            "group": grp_name, "name": name, "kind": kind, "n_samples": n,
+            "best_delta": best, "mean_delta": mean, "std_delta": std,
+            "qt_best": qcomod.compute_qt(best, g_size),
+            "qt_mean": qcomod.compute_qt(mean, g_size),
+            "q_opt": q_opt,
+        })
+
+    if not rows:
+        print("no rows matched the panel+filter criteria.", file=sys.stderr)
+        return 1
+
+    rows.sort(key=lambda r: (r["group"], r["best_delta"]))
+    print(f"{'group':>6s}  {'extension':<22s}  {'kind':<13s}  "
+          f"{'n':>3s}  {'best_δ':>8s}  {'mean_δ':>8s}  {'std_δ':>7s}  "
+          f"{'Q_T(b)':>7s}  {'Q_T(μ)':>7s}  {'Q_opt':>7s}")
+    print("-" * 100)
+    for r in rows:
+        qb = f"{r['qt_best']:7.3f}" if r['qt_best'] == r['qt_best'] else "    nan"
+        qm = f"{r['qt_mean']:7.3f}" if r['qt_mean'] == r['qt_mean'] else "    nan"
+        print(f"{r['group']:>6s}  {r['name']:<22s}  {r['kind']:<13s}  "
+              f"{r['n_samples']:>3d}  {r['best_delta']:8.4f}  "
+              f"{r['mean_delta']:8.4f}  {r['std_delta']:7.4f}  "
+              f"{qb}  {qm}  {r['q_opt']:7.3f}")
+    return 0
+
+
+def _run_q_panel(args) -> int:
+    """Handler for `swiftbot q-panel`: deterministic Q_T grid."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from swiftbot.stages import s3_efficiency as s3
+
+    panel_def = PANELS[args.panel]
+    ext_list = panel_def["extensions"]()
+    groups = (
+        tuple(g.strip() for g in args.groups.split(",") if g.strip())
+        if args.groups else panel_def["default_groups"]
+    )
+
+    unknown = [g for g in groups if g not in gmod.REGISTRY]
+    if unknown:
+        print(f"error: unknown group(s): {unknown}. "
+              f"Registered: {sorted(gmod.REGISTRY.keys())}", file=sys.stderr)
+        return 2
+    wrong_dim = [g for g in groups if gmod.REGISTRY[g].d != panel_def["dim"]]
+    if wrong_dim:
+        print(f"error: panel '{args.panel}' is d={panel_def['dim']} but "
+              f"group(s) {wrong_dim} have other dimensions.", file=sys.stderr)
+        return 2
+
+    jobs = [(grp, name, spec) for grp in groups for name, spec in ext_list]
+    print(f"q-panel: panel={args.panel} groups={groups} "
+          f"extensions={len(ext_list)} total={len(jobs)} t={args.t}",
+          file=sys.stderr)
+
+    cache_kwargs: dict = {"run_id": args.run_id}
+    if args.db is not None:
+        cache_kwargs["path"] = args.db
+
+    results: list[tuple[str, str, str, list]] = [None] * len(jobs)
+
+    # Share one Cache across threads — it's thread-safe (see kb/cache.py).
+    # Per-thread connections caused WAL-init contention.
+    with Cache(**cache_kwargs) as shared_cache:
+
+        def _run_one(idx_job):
+            idx, (grp, name, spec) = idx_job
+            ss = args.rnd_samples if spec.kind == "rnd" else 1
+            t0 = time.time()
+            recs = s3.evaluate_extension(
+                spec, grp,
+                t=args.t, sample_size=ss, cache=shared_cache,
+                timeout_s=args.timeout, verbose=False,
+                in_process=args.in_process,
+                shard_workers=args.shard_workers,
+            )
+            dt = time.time() - t0
+            return idx, (grp, name, spec.kind, recs, dt)
+
+        workers = 1 if args.in_process else max(1, args.workers)
+        if workers == 1:
+            for idx_job in enumerate(jobs):
+                idx, out = _run_one(idx_job)
+                results[idx] = out
+                grp, name, _, recs, dt = out
+                best = min(r.delta for r in recs) if recs else float("nan")
+                print(f"  [{idx+1}/{len(jobs)}] {grp:>6s} {name:<20s} "
+                      f"best_delta={best:.4f}  {dt:.1f}s",
+                      file=sys.stderr, flush=True)
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futs = [pool.submit(_run_one, ij) for ij in enumerate(jobs)]
+                done = 0
+                for fut in as_completed(futs):
+                    idx, out = fut.result()
+                    results[idx] = out
+                    done += 1
+                    grp, name, _, recs, dt = out
+                    best = min(r.delta for r in recs) if recs else float("nan")
+                    print(f"  [{done}/{len(jobs)}] {grp:>6s} {name:<20s} "
+                          f"best_delta={best:.4f}  {dt:.1f}s",
+                          file=sys.stderr, flush=True)
+
+    # Ranked table: best δ + mean ± std + Q_T.
+    from math import sqrt
+    from swiftbot.tools import qco as qcomod
+    rows = []
+    for grp, name, kind, recs, dt in results:
+        group_spec = gmod.REGISTRY[grp]
+        q_opt = qcomod.q_opt(group_spec.expected_size)
+        deltas = [r.delta for r in recs]
+        n = len(deltas)
+        if n:
+            best = min(deltas)
+            mean = sum(deltas) / n
+            std = sqrt(sum((d - mean) ** 2 for d in deltas) / n) if n > 1 else 0.0
+        else:
+            best = mean = std = float("nan")
+        qt_best = qcomod.compute_qt(best, group_spec.expected_size)
+        qt_mean = qcomod.compute_qt(mean, group_spec.expected_size)
+        rows.append({
+            "group": grp, "name": name, "kind": kind, "n_samples": n,
+            "best_delta": best, "mean_delta": mean, "std_delta": std,
+            "qt_best": qt_best, "qt_mean": qt_mean,
+            "q_opt": q_opt, "seconds": dt,
+        })
+
+    rows.sort(key=lambda r: (r["group"], r["best_delta"]))
+    print()
+    print(f"{'group':>6s}  {'extension':<22s}  {'kind':<13s}  "
+          f"{'n':>3s}  {'best_δ':>8s}  {'mean_δ':>8s}  {'std_δ':>7s}  "
+          f"{'Q_T(b)':>7s}  {'Q_T(μ)':>7s}  {'Q_opt':>7s}  {'sec':>6s}")
+    print("-" * 110)
+    for r in rows:
+        qb = f"{r['qt_best']:7.3f}" if r['qt_best'] == r['qt_best'] else "    nan"
+        qm = f"{r['qt_mean']:7.3f}" if r['qt_mean'] == r['qt_mean'] else "    nan"
+        print(f"{r['group']:>6s}  {r['name']:<22s}  {r['kind']:<13s}  "
+              f"{r['n_samples']:>3d}  {r['best_delta']:8.4f}  "
+              f"{r['mean_delta']:8.4f}  {r['std_delta']:7.4f}  "
+              f"{qb}  {qm}  {r['q_opt']:7.3f}  {r['seconds']:6.1f}")
+
+    import json as _json
+    print(_json.dumps(rows, indent=2, default=str))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -396,6 +740,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(record.model_dump_json(indent=2))
         return 0
+
+    if args.cmd == "q-panel":
+        return _run_q_panel(args)
+
+    if args.cmd == "q-panel-summary":
+        return _run_q_panel_summary(args)
 
     if args.cmd == "codes":
         if args.group is not None:

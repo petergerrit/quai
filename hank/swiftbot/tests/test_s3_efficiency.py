@@ -10,6 +10,9 @@ We cover three layers:
 from __future__ import annotations
 
 import math
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -213,3 +216,120 @@ def test_evaluate_extension_rnd_tiny_case(tmp_path: Path) -> None:
     assert rec.q_opt == pytest.approx(
         math.log(24) / math.log(24 / (2 * math.sqrt(23)))
     )
+
+
+@pytest.mark.skipif(not s3.MAIN_PY.exists(), reason="qco-main_opt/main.py missing")
+def test_conj_cache_matches_direct_path(tmp_path: Path) -> None:
+    """Conjugation cache (default ON) must produce identical δ to the direct path.
+
+    Uses a fixed-angle extension so the run is deterministic — no per-sample
+    RNG, so OFF and ON sample the *same* Π(g·rg·g†) up to floating-point.
+    Tolerance is generous (1e-10) to leave headroom for accumulated round-off
+    in the conjugation chain across all 24 Clifford elements.
+    """
+    work_off = tmp_path / "off"
+    work_on = tmp_path / "on"
+    work_off.mkdir(); work_on.mkdir()
+
+    def run(work_dir: Path, cache_on: bool) -> list[list[float]]:
+        argv = [
+            sys.executable, str(s3.MAIN_PY),
+            "-d", "2", "-t", "5", "-sample_size", "2",
+            "-gates_path", str(s3.QCO_DIR / "clifford.txt"),
+            "-n_of_generators", "1",
+            "-fixed_gate_angle", "0.25",  # P(π/4)
+            "-base_rep_cache", "1" if cache_on else "0",
+        ]
+        proc = subprocess.run(argv, cwd=work_dir, capture_output=True, text=True, timeout=60)
+        assert proc.returncode == 0, proc.stderr
+        norms = [p for p in work_dir.glob("qcoG*.txt") if not p.stem.endswith("-gates")]
+        assert len(norms) == 1
+        with norms[0].open() as f:
+            lines = f.readlines()
+        # line 0 is header; lines 1.. are per-sample δ rows
+        return [[float(x) for x in ln.split()] for ln in lines[1:]]
+
+    off = run(work_off, cache_on=False)
+    on = run(work_on, cache_on=True)
+    assert len(off) == len(on) == 2, (off, on)
+    for s, (r_off, r_on) in enumerate(zip(off, on)):
+        max_diff = max(abs(a - b) for a, b in zip(r_off, r_on))
+        assert max_diff < 1e-10, (
+            f"OFF/ON deltas diverge at sample {s}: max diff {max_diff:.3e}\n"
+            f"OFF={r_off}\nON={r_on}"
+        )
+
+
+@pytest.mark.skipif(not s3.MAIN_PY.exists(), reason="qco-main_opt/main.py missing")
+def test_pi_disk_cache_hit_matches_miss(tmp_path: Path) -> None:
+    """Two subprocess invocations sharing a Π(g) cache dir must match a
+    no-cache baseline to machine precision. Covers the {miss, hit} path and
+    catches serialization round-trip bugs."""
+    cache_dir = tmp_path / "pi_cache"
+    baseline_work = tmp_path / "baseline"
+    first_work = tmp_path / "first"
+    second_work = tmp_path / "second"
+    for d in (baseline_work, first_work, second_work):
+        d.mkdir()
+
+    def run(work_dir: Path, *, use_cache: bool) -> list[list[float]]:
+        env = dict(os.environ)
+        if use_cache:
+            env["QCO_PI_CACHE_DIR"] = str(cache_dir)
+        else:
+            env.pop("QCO_PI_CACHE_DIR", None)
+        argv = [
+            sys.executable, str(s3.MAIN_PY),
+            "-d", "2", "-t", "5", "-sample_size", "2",
+            "-gates_path", str(s3.QCO_DIR / "clifford.txt"),
+            "-n_of_generators", "1",
+            "-fixed_gate_angle", "0.25",
+        ]
+        proc = subprocess.run(
+            argv, cwd=work_dir, capture_output=True, text=True, timeout=60, env=env,
+        )
+        assert proc.returncode == 0, proc.stderr
+        norms = [p for p in work_dir.glob("qcoG*.txt") if not p.stem.endswith("-gates")]
+        assert len(norms) == 1
+        with norms[0].open() as f:
+            lines = f.readlines()
+        return [[float(x) for x in ln.split()] for ln in lines[1:]]
+
+    baseline = run(baseline_work, use_cache=False)
+    miss = run(first_work, use_cache=True)    # populates the cache
+    hit = run(second_work, use_cache=True)    # loads from cache
+
+    cached_files = list(cache_dir.glob("v*_w*.pkl"))
+    assert cached_files, f"no Pi(g) cache files written under {cache_dir}"
+
+    for label, rows in (("miss", miss), ("hit", hit)):
+        for s, (r_base, r_cached) in enumerate(zip(baseline, rows)):
+            max_diff = max(abs(a - b) for a, b in zip(r_base, r_cached))
+            assert max_diff < 1e-10, (
+                f"{label} diverges at sample {s}: max diff {max_diff:.3e}"
+            )
+
+
+@pytest.mark.skipif(not s3.MAIN_PY.exists(), reason="qco-main_opt/main.py missing")
+def test_in_process_matches_subprocess(tmp_path: Path) -> None:
+    """evaluate_extension(in_process=True) must agree with the subprocess path
+    to machine precision on a deterministic (fixed-angle) case."""
+    spec = ExtensionSpec(kind="angle", params={"theta": math.pi / 4}, rationale="")
+    with Cache(tmp_path / "cache_sp.db", run_id="sp") as cache_sp:
+        sp_records = s3.evaluate_extension(
+            spec, "clifford", t=5, sample_size=2, cache=cache_sp,
+            work_dir=tmp_path / "sp_work", timeout_s=60,
+            in_process=False,
+        )
+    with Cache(tmp_path / "cache_ip.db", run_id="ip") as cache_ip:
+        ip_records = s3.evaluate_extension(
+            spec, "clifford", t=5, sample_size=2, cache=cache_ip,
+            work_dir=tmp_path / "ip_work",
+            in_process=True,
+        )
+    assert len(sp_records) == len(ip_records) == 2
+    for r_sp, r_ip in zip(sp_records, ip_records):
+        assert r_sp.delta == pytest.approx(r_ip.delta, abs=1e-10), (
+            f"subprocess δ={r_sp.delta} vs in-process δ={r_ip.delta}"
+        )
+        assert r_sp.qt == pytest.approx(r_ip.qt, abs=1e-6)

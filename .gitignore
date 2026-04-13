@@ -24,9 +24,30 @@ dist/
 *.db-wal
 *.db-shm
 
-# SWIFTbot runtime artefacts (regenerable from code + registered target families)
-hank/sweep_runs/
+# SWIFTbot runtime artefacts (regenerable from code + registered target families).
+# We keep the top-level sweep_runs/ dir tracked so its driver .py scripts and
+# summary .txt files commit; large .db and per-run logs/ stay ignored.
+hank/sweep_runs/*.db
+hank/sweep_runs/*.db-wal
+hank/sweep_runs/*.db-shm
+hank/sweep_runs/logs/
+hank/sweep_runs/*.stdout
+hank/sweep_runs/*.stderr
 hank/literature/paper_extracted/
+hank/swiftbot/.pi_cache/
+
+# Claude Code agent state (per-user)
+hank/.claude/
+
+# LaTeX build artefacts (paper/ keeps .tex, .bib, .pdf; regenerable log/aux)
+hank/paper/*.aux
+hank/paper/*.log
+hank/paper/*.bbl
+hank/paper/*.blg
+hank/paper/*.out
+hank/paper/*.toc
+hank/paper/main.tex.bak
+hank/paper/mainNotes.bib       # revtex auto-generated
 
 # Large clifford_t data directories (experimental outputs; > 1 GB total)
 hank/clifford_t/norm_data/

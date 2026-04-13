@@ -68,9 +68,32 @@ def _inline_generators(key: str):
 
 @_inline_generators("hurwitz")
 def _hurwitz_gens() -> list[np.ndarray]:
-    """12-element Hurwitz group (alternating 4, 1-qubit golden gates).
-    Generators per qco-main_opt/finite_groups.py — raw; normalization to SU(d)
-    is done uniformly in get_group()."""
+    """12-element Hurwitz group in PU(2) — projectively closed A4.
+
+    WARNING: this key is a NAMING COLLISION hotspot. Three different objects
+    get called "Hurwitz" in the quantum-gate literature:
+
+    1. Our "hurwitz" (registered here): projective A4 ⊂ PU(2), |C| = 12.
+       The SU(2) lift is the binary tetrahedral 2T = 24 elements, same abstract
+       group order as the Pauli-Clifford (also 24) but distinct embedding.
+       Used as the base group in Parzanchevski-Sarnak super-golden constructions.
+
+    2. "Hurwitz golden gates" in Parzanchevski-Sarnak / Sarnak 2015: a specific
+       generating set whose closure is this same group 1 (or a covering thereof).
+       NOT the same as the 120-element group below.
+
+    3. The binary icosahedral group 2I = |C| = 120, ubiquitously mislabelled
+       "Hurwitz" in QCO-style papers because Hurwitz's quaternion theory
+       underlies its golden-gate status. Registered in SWIFTbot under the
+       key "BI", NOT "hurwitz". The Kubischta et al. 2I transversal-gate
+       code has transversal group == our "BI", not our "hurwitz".
+
+    If you see the name "Hurwitz" in a paper and it reports |C| = 120, it
+    means our BI. If it reports |C| = 12 or 24, it means this group.
+
+    Generators below are raw (not unit-normalised); get_group() normalises
+    to PU(2) with projective=True per the registry spec.
+    """
     return [
         np.array([[1j, 0], [0, -1j]], dtype=complex),
         np.array([[1, 1], [1j, -1j]], dtype=complex),

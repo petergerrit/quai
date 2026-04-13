@@ -1,6 +1,6 @@
 import sys
 
-import scripts
+import scripts_optimized as scripts
 
 
 
