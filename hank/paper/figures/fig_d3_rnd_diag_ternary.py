@@ -50,8 +50,12 @@ _SIGMA_LABELS = {
     "S1080": r"$\Sigma(360{\times}3)$",
 }
 
-# ternary scale — the three barycentric coordinates sum to this value.
-SCALE = 1.0
+# ternary scale: three barycentric coords sum to SCALE. We use SCALE = 2
+# so the triangle is labeled 0 → 2π (in units of π), matching the physical
+# range of each θᵢ. Data are normalized so Σ coord = SCALE, i.e., each
+# plotted coordinate is θᵢ · 2 / Σθⱼ, read as "amount of π this axis
+# carries if the total θ-sum were redistributed to the unit simplex".
+SCALE = 2.0
 
 
 def to_barycentric(theta1: float, theta2: float, theta3: float) -> tuple[float, float, float] | None:
@@ -171,18 +175,16 @@ def main() -> None:
         ax.set_aspect("equal")      # equilateral triangle
         _, tax = ternary.figure(ax=ax, scale=SCALE)
         tax.boundary(linewidth=1.2)
-        tax.gridlines(color="0.6", multiple=SCALE / 5.0, linewidth=0.5)
-        tax.set_title(_SIGMA_LABELS[g], pad=22)
+        tax.gridlines(color="0.6", multiple=0.5, linewidth=0.5)
+        tax.set_title(_SIGMA_LABELS[g], pad=26)
 
-        # Edge ticks are barycentric fractions 0, 0.2, ..., 1.0 — i.e.,
-        # each θᵢ's share of Σ θⱼ (after reducing each to [0, 2π)).
-        tax.ticks(axis="lbr", linewidth=0.8, multiple=SCALE / 5.0,
-                  tick_formats="%.1f", offset=0.02, fontsize=7)
-        # Corner labels: a point near the θᵢ corner means θᵢ dominates the
-        # triple. The ticks are still fractional shares, not radians.
-        tax.top_corner_label(r"$\theta_1$", fontsize=11, offset=0.16)
-        tax.right_corner_label(r"$\theta_2$", fontsize=11, offset=0.04)
-        tax.left_corner_label(r"$\theta_3$", fontsize=11, offset=0.04)
+        # Edge ticks every π/2, labeled in π units: 0, 0.5π, 1.0π, 1.5π, 2π.
+        tax.ticks(axis="lbr", linewidth=0.8, multiple=0.5,
+                  tick_formats=r"$%.1f\pi$", offset=0.025, fontsize=8)
+        # Corner labels: a point near the θᵢ corner means θᵢ dominates.
+        tax.top_corner_label(r"$\theta_1$", fontsize=11, offset=0.22)
+        tax.right_corner_label(r"$\theta_2$", fontsize=11, offset=0.08)
+        tax.left_corner_label(r"$\theta_3$", fontsize=11, offset=0.08)
 
         # Data points colored by δ.
         rows = data[g]
