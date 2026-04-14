@@ -222,6 +222,17 @@ deterministically without network or API access (the LLM tests use the
   on `evaluate_extension(...)`) skips the subprocess fork and saves
   ~5 s per call. Useful for interactive small-panel debugging; loses
   crash isolation, so do not combine with `--workers > 1`.
+- **Memory safety**: `q-panel` runs a pre-flight check that estimates
+  peak concurrent RSS from `|C|`, `t`, `--workers`, and `--shard-workers`
+  and aborts if it would exceed 70 % of `MemAvailable`. Each qco
+  subprocess is capped via `RLIMIT_AS` at 1.5× the per-proc estimate, so
+  a runaway child raises `MemoryError` rather than OOM-killing the host.
+  A lightweight runtime-backpressure check pauses dispatch when free RAM
+  drops below `SWIFTBOT_MEM_BACKPRESSURE_GB` (default 6 GB). Override
+  with `--ignore-memory-budget`, `--rss-cap-gb` (0 disables),
+  `--mem-backpressure-gb`, or the `SWIFTBOT_MEM_*` environment
+  variables. See `swiftbot/stages/mem_safety.py` for the RSS model and
+  its calibration anchor (d=3, t=10, |C|=216 ≈ 4 GB).
 
 ## License
 
