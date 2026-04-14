@@ -3,8 +3,8 @@
 Subgroup Workflow for Identifying Fault-tolerant T-extensions. A five-stage
 pipeline for numerically surveying finite-subgroup + single-gate extensions of
 `SU(d)` by the quantum circuit overhead `Q_T` of Słowik, Dulian, and
-Sawicki (arXiv:2505.00683). Companion code for Lamm, Vander Griend,
-Tame-Narvaez, and Fleming, *Efficient gate-set extensions for fault-tolerant
+Sawicki (arXiv:2505.00683). Companion code for Fleming, Lamm,
+Tame-Narvaez, and Vander Griend, *Efficient gate-set extensions for fault-tolerant
 qudit quantum computation* (FERMILAB-PUB-26-TBA-T, in preparation).
 
 Practical qudit fault-tolerant computation needs a finite gate set that is
@@ -231,8 +231,8 @@ Until the paper is posted to arXiv, please cite the in-preparation manuscript:
 
 ```bibtex
 @misc{swiftbot_paper,
-    author    = {Lamm, Henry and Vander Griend, Peter and
-                 Tame-Narvaez, Karla and Fleming, George T.},
+    author    = {Fleming, George T. and Lamm, Henry and
+                 Tame-Narvaez, Karla and Vander Griend, Peter},
     title     = {Efficient gate-set extensions for fault-tolerant
                  qudit quantum computation},
     howpublished = {FERMILAB-PUB-26-TBA-T, in preparation},
@@ -241,8 +241,8 @@ Until the paper is posted to arXiv, please cite the in-preparation manuscript:
 }
 
 @misc{swiftbot_github,
-    author    = {Lamm, Henry and Vander Griend, Peter and
-                 Tame-Narvaez, Karla and Fleming, George T.},
+    author    = {Fleming, George T. and Lamm, Henry and
+                 Tame-Narvaez, Karla and Vander Griend, Peter},
     title     = {{SWIFTbot}: a pipeline for efficient qudit gate-set discovery},
     howpublished = {\url{https://github.com/petergerrit/quai}},
     year      = {2026},
