@@ -3,7 +3,7 @@
 Subgroup Workflow for Identifying Fault-tolerant T-extensions. A five-stage
 pipeline for numerically surveying finite-subgroup + single-gate extensions of
 `SU(d)` by the quantum circuit overhead `Q_T` of Słowik, Dulian, and
-Sawicki (arXiv:2509.20240). Companion code for Lamm, Vander Griend,
+Sawicki (arXiv:2505.00683). Companion code for Lamm, Vander Griend,
 Tame-Narvaez, and Fleming, *Efficient gate-set extensions for fault-tolerant
 qudit quantum computation* (FERMILAB-PUB-26-TBA-T, in preparation).
 
@@ -22,8 +22,8 @@ CI). All compute paths run locally with `numpy` + `scipy`; the optional LLM
 supervisor calls the Anthropic API.
 
 ```bash
-git clone https://github.com/TODO/swiftbot.git
-cd swiftbot/hank
+git clone https://github.com/petergerrit/quai.git
+cd quai/hank
 python -m venv swiftbot/.venv
 source swiftbot/.venv/bin/activate
 pip install -r swiftbot/requirements.txt
@@ -141,15 +141,30 @@ repository as follows.
   small panels). Applies the `g c g†` conjugation-cache and the on-disk
   `π_λ(c)` cache for the 3--6× speedup described in §4.3 of the paper.
 - **Stage 4: QEC-code catalogue** --- `swiftbot/tools/codes.py`.
-  Seven curated entries (Steane, Reed--Muller [[15,1,3]], Bravyi--Haah
-  [[49,1,5]], Kubischta 2I, qutrit triorthogonal, ternary Golay,
-  Bravyi--Haah CCZ). Returns a "research needed" marker and an EC Zoo
-  pointer when no curated match exists.
+  Twelve curated entries: Steane [[7,1,3]], 5-qubit perfect [[5,1,3]],
+  Reed--Muller [[15,1,3]], Bravyi--Haah [[49,1,5]] triorthogonal, Kubischta
+  2I ((7,2,3)) and 2O families, qutrit triorthogonal [[20,7,2]]_3, ternary
+  Golay [[11,1,5]]_3, Denys--Leverrier 2T-qutrit bosonic code, the
+  Kubischta--Teixeira twisted-unitary-t-group framework entry, and two
+  permutation-invariant (PI) entries used by the Ouyang--Jing--Brennen
+  code-switching route (Pollatsek--Ruskai [[7,1,3]]_PI and the
+  Kubischta--Teixeira (2b+3)-qubit PI family). Returns a "research
+  needed" marker and an EC Zoo pointer when no curated match exists.
 - **Stage 5: distillation protocols** --- `swiftbot/tools/distillation.py`.
-  Bravyi--Kitaev 15-to-1, Bravyi--Haah triorthogonal (T and CCZ),
-  Campbell--Anwar--Browne qutrit triorthogonal, ternary Golay.
-  `family_for_extension(spec)` coarse-tags extensions (`qubit T`,
-  `qubit CCZ`, `qutrit T`, `qutrit strange`).
+  Nine curated protocols spanning four target-gate families:
+  Bravyi--Kitaev 15-to-1 and Bravyi--Haah triorthogonal for `qubit T`;
+  Bravyi--Haah CCZ for `qubit CCZ`; Duclos-Cianci--Poulin,
+  Campbell--O'Gorman, and Campbell--Howard for `qubit Z-rotation
+  (programmable)` (a Clifford+T substrate that bypasses the
+  Anderson--Jochym-O'Connor no-go for non-Clifford-hierarchy angles);
+  Ouyang--Jing--Brennen PI code-switching for `qubit rational-angle
+  (non-stabilizer code-switching)` (a second AJOC bypass that does not
+  route through Clifford+T); Campbell--Anwar--Browne qutrit triorthogonal
+  [[9m-k,k,2]]_3 for `qutrit T`; and ternary Golay strange-state for
+  `qutrit strange`. `family_for_extension(spec)` coarse-tags extensions
+  into one of these families; `ajoc_excluded(spec, d)` reports whether
+  the Anderson--Jochym-O'Connor classification forbids a direct
+  stabilizer-code transversal implementation.
 - **LLM supervisor** --- `swiftbot/llm.py`, `swiftbot/supervisor.py`.
   Anthropic SDK wrapper with Pydantic-enforced structured output via
   tool-use. A `ScriptedLLM` backend makes CI deterministic.
@@ -183,7 +198,7 @@ cross-validation test that catches dangling references.
   argparse entries. No automated test, but
   `_d3_survey_panel()` / `_d3_rnd_apples_panel()` are clean templates.
 
-`pytest swiftbot/tests/` runs in ~11 seconds locally; all tests pass
+`pytest swiftbot/tests/` runs in ~25 seconds locally (161 tests); all pass
 deterministically without network or API access (the LLM tests use the
 `ScriptedLLM` backend).
 
@@ -222,15 +237,15 @@ Until the paper is posted to arXiv, please cite the in-preparation manuscript:
                  qudit quantum computation},
     howpublished = {FERMILAB-PUB-26-TBA-T, in preparation},
     year      = {2026},
-    note      = {Companion code: \url{https://github.com/TODO/swiftbot}}
+    note      = {Companion code: \url{https://github.com/petergerrit/quai}}
 }
 
 @misc{swiftbot_github,
     author    = {Lamm, Henry and Vander Griend, Peter and
                  Tame-Narvaez, Karla and Fleming, George T.},
     title     = {{SWIFTbot}: a pipeline for efficient qudit gate-set discovery},
-    howpublished = {\url{https://github.com/TODO/swiftbot}},
+    howpublished = {\url{https://github.com/petergerrit/quai}},
     year      = {2026},
-    note      = {Software release accompanying the paper; final URL pending}
+    note      = {Software release accompanying the paper}
 }
 ```
