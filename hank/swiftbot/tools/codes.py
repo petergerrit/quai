@@ -31,20 +31,31 @@ _CODES: list[CodeRecord] = [
     CodeRecord(
         name="Steane [[7,1,3]]",
         n=7, k=1, distance=3, qudit_dim=2,
-        transversal_groups=["clifford"],
+        transversal_groups=["clifford", "BO"],
         stabilizer=True,
-        reference="Steane, quant-ph/9601029",
-        notes="All Cliffords transversal; first CSS triple-error-detecting code.",
+        reference=(
+            "Steane, quant-ph/9601029; "
+            "Denys-Leverrier, PRL 133, 240603 (2024) [arXiv:2306.11621] for 2O transversality"
+        ),
+        notes=(
+            "All single-qubit Cliffords transversal; first CSS triple-error-detecting code. "
+            "The SU(2) lift of the single-qubit Clifford group is 2O=BO (48 elements); "
+            "the projective group 'clifford' and its lift 'BO' both tag this entry."
+        ),
     ),
     CodeRecord(
         name="5-qubit perfect [[5,1,3]]",
         n=5, k=1, distance=3, qudit_dim=2,
-        transversal_groups=[],   # single-qubit Clifford transversal group on [[5,1,3]] is cyclic, not all of Clifford
+        transversal_groups=["BT"],
         stabilizer=True,
-        reference="Laflamme-Miquel-Paz-Zurek, PRL 77, 198 (1996)",
+        reference=(
+            "Laflamme-Miquel-Paz-Zurek, PRL 77, 198 (1996); "
+            "Denys-Leverrier, PRL 133, 240603 (2024) [arXiv:2306.11621] for 2T transversality"
+        ),
         notes=(
-            "Single-qubit transversal group is cyclic (Gottesman); not registered "
-            "in SWIFTbot. Included for reference — not a match for 'clifford'."
+            "Logical single-qubit Clifford transversal group is cyclic (Gottesman). "
+            "However, at the multi-qubit codeblock level the binary tetrahedral "
+            "2T=BT acts transversally via the Denys-Leverrier covariant encoding."
         ),
     ),
     CodeRecord(
@@ -107,6 +118,79 @@ _CODES: list[CodeRecord] = [
         stabilizer=True,
         reference="Magic state distillation with the ternary Golay code, RSPA (2020)",
         notes="Distills the 'strange' qutrit magic state; no fully classified transversal group.",
+    ),
+    CodeRecord(
+        name="2T-qutrit bosonic code (two-mode)",
+        n=None, k=1, distance=None, qudit_dim=3,
+        transversal_groups=["BT"],
+        stabilizer=False,
+        reference="Denys & Leverrier, Quantum 7, 1032 (2023) [arXiv:2210.16188]",
+        notes=(
+            "Bosonic qutrit encoded in two modes, spanned by 24 coherent states "
+            "indexed by the binary tetrahedral group 2T=BT. The group 2T acts "
+            "transversally on the logical qutrit via its 3-dimensional irrep; "
+            "no direct classification with the qutrit Pauli-Clifford group. "
+            "Useful as a C_data candidate for BT-extensions at d=3."
+        ),
+        research_needed=False,
+    ),
+    # --- Broader nonadditive/twisted-t-group framework (Kubischta-Teixeira 2024) ---
+    CodeRecord(
+        name="Twisted unitary t-group codes (framework)",
+        n=None, k=None, distance=None, qudit_dim=2,
+        transversal_groups=[],
+        stabilizer=False,
+        reference="Kubischta & Teixeira, PRL 133, 030602 (2024) [arXiv:2402.01638]",
+        notes=(
+            "General framework: twisted unitary t-groups correspond to quantum "
+            "codes with distance d=t+1 and many transversal gates. Subsumes the "
+            "Kubischta 2I ((7,2,3)) code and extends to other finite subgroups "
+            "of SU(d) via twisting by irreducible representations. Classification "
+            "of which SU(3) Sigma-series subgroups are realised remains open."
+        ),
+        research_needed=True,
+    ),
+    # --- Permutation-invariant (PI) qubit codes: an AJOC loophole ---
+    CodeRecord(
+        name="Pollatsek-Ruskai [[7,1,3]]_PI",
+        n=7, k=1, distance=3, qudit_dim=2,
+        transversal_groups=[],
+        stabilizer=False,
+        reference=(
+            "Pollatsek & Ruskai (2004); re-analysed in "
+            "Aydin et al. and Kubischta-Teixeira; "
+            "deployed for code-switching in Ouyang, Jing & Brennen, arXiv:2411.13142"
+        ),
+        notes=(
+            "7-qubit permutation-invariant distance-3 qubit code with a transversal "
+            "logical T gate via Z(3π/4)^{⊗7} (i.e. T† = Z(3π/4) on each physical). "
+            "Non-stabilizer, so the Anderson-Jochym-O'Connor (AJOC) no-go for "
+            "transversal non-Clifford gates on qubit stabilizer codes does not "
+            "apply. Clifford gates are NOT transversal — fault-tolerant universality "
+            "requires code-switching (Ouyang-Jing-Brennen) or state injection to a "
+            "Clifford-compatible code. Member of the Aydin (b,g)-PI family at g=3, b=2."
+        ),
+    ),
+    CodeRecord(
+        name="Kubischta-Teixeira (2b+3)-qubit PI family",
+        n=None, k=1, distance=3, qudit_dim=2,
+        transversal_groups=[],
+        stabilizer=False,
+        reference=(
+            "Kubischta-Teixeira PI family (ref [47] of arXiv:2411.13142); "
+            "deployed by Ouyang, Jing & Brennen, arXiv:2411.13142"
+        ),
+        notes=(
+            "(b,g=3,k)-PI family on 2b+3 physical qubits. Each member admits "
+            "transversal Z(πg/b) = Z(3π/b) — i.e. tunable rational-angle logical "
+            "Z-rotations (b=4 → 11-qubit code with transversal Z(3π/4), etc.). "
+            "Non-stabilizer qubit codes; AJOC exclusion of rational-angle "
+            "transversal P(θ) applies only to stabilizer codes, so this family "
+            "provides a second fault-tolerant route (alongside programmable MSD "
+            "on Clifford+T) to arbitrary rational-angle qubit rotations. "
+            "Clifford gates are not transversal — Ouyang-Jing-Brennen code-switch "
+            "to a Steane-like stabilizer code for the Clifford layer."
+        ),
     ),
 ]
 

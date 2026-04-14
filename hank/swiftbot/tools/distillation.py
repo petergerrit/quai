@@ -92,6 +92,44 @@ _PROTOCOLS: list[DistillationRecord] = [
             "to Clifford+T synthesis. Same Clifford+T substrate."
         ),
     ),
+    DistillationRecord(
+        protocol_name="Campbell-Howard parity-checker (pre-distilled)",
+        target_gate_family="qubit Z-rotation (programmable)",
+        qudit_dim=2,
+        code_name="Clifford+T substrate",
+        yield_parameter=None,
+        reference="Campbell & Howard, arXiv:1709.02214 (2017)",
+        notes=(
+            "Two-step protocol: pre-distillation of multi-qubit resource states, "
+            "followed by non-Pauli parity checking. Enables direct injection of "
+            "single-qubit axial rotations without subsequent gate-synthesis, with "
+            "quadratic error reduction. Clifford+T substrate, so AJOC exclusion of "
+            "a direct stabilizer-code transversal implementation still applies — "
+            "this is a programmable-MSD route, not an AJOC loophole."
+        ),
+    ),
+    # --- Non-stabilizer (PI code) code-switching: a second AJOC loophole ---
+    DistillationRecord(
+        protocol_name="Ouyang-Jing-Brennen PI code-switching",
+        target_gate_family="qubit rational-angle (non-stabilizer code-switching)",
+        qudit_dim=2,
+        code_name="Kubischta-Teixeira (2b+3)-qubit PI family",
+        yield_parameter=None,
+        reference="Ouyang, Jing & Brennen, arXiv:2411.13142 (2024)",
+        notes=(
+            "Not MSD: measurement-free code-switching between a stabilizer code "
+            "(transversal Cliffords) and a permutation-invariant (PI) code with "
+            "transversal Z(πg/b) for rational g/b, glued by CNOTs through a "
+            "catalytic bosonic mode. Sidesteps the Anderson-Jochym-O'Connor no-go "
+            "entirely — AJOC forbids transversal P(θ) on stabilizer codes, but "
+            "PI codes are non-stabilizer. Provides a second fault-tolerant route "
+            "to arbitrary rational-angle qubit rotations alongside programmable "
+            "MSD (Duclos-Cianci-Poulin, Campbell-O'Gorman, Campbell-Howard). "
+            "Code-switching is the paper's consumption pattern; state injection "
+            "on the same PI-encoded magic state |M(θ)⟩ = Z(θ)|+⟩_L is a viable "
+            "alternative (but requires measurement-based inter-code conversion)."
+        ),
+    ),
     # --- Qutrit ---
     DistillationRecord(
         protocol_name="Qutrit triorthogonal [[9m-k,k,2]]_3",
@@ -155,8 +193,18 @@ def family_for_extension(ext_kind: str, ext_params: dict, qudit_dim: int) -> str
     return None
 
 
+_NON_STABILIZER_BYPASS = (
+    " Note: this is a STABILIZER-CODE no-go only. Non-stabilizer qubit codes "
+    "(Pollatsek-Ruskai and Kubischta-Teixeira permutation-invariant codes, "
+    "Denys-Leverrier covariant-encoding 2T/2O codes, Kubischta 2I) can host "
+    "transversal non-Clifford gates directly. See protocol "
+    "'Ouyang-Jing-Brennen PI code-switching' for a fault-tolerant route to "
+    "arbitrary rational-angle Z-rotations that sidesteps AJOC."
+)
+
+
 def ajoc_excluded(ext_kind: str, ext_params: dict, qudit_dim: int) -> tuple[bool, str]:
-    """Is this extension provably outside every qubit stabilizer-code's
+    """Is this extension provably outside every qubit STABILIZER-code's
     transversal set (Anderson-Jochym-O'Connor 2014 [arXiv:1409.8320])?
 
     Returns (excluded, reason_string). At d=2, any non-Clifford-hierarchy gate
@@ -164,6 +212,12 @@ def ajoc_excluded(ext_kind: str, ext_params: dict, qudit_dim: int) -> tuple[bool
     π with an odd denominator factor (e.g. 2π/9, 2π/5, π/9, π/18) and every
     Haar-random generator. The canonical Clifford+T at π/4 is at level 3 of
     the hierarchy and is NOT excluded.
+
+    IMPORTANT: the AJOC theorem applies to STABILIZER codes only. Non-stabilizer
+    qubit codes (e.g. Pollatsek-Ruskai and Kubischta-Teixeira PI codes,
+    Denys-Leverrier covariant codes) can host transversal non-Clifford gates
+    directly; the `reason_string` notes this loophole so callers don't
+    over-claim impossibility.
 
     At d>2 we have no analogous classification theorem (see Campbell et al.);
     this function returns (False, "no known qudit classification") for d>=3.
@@ -177,18 +231,19 @@ def ajoc_excluded(ext_kind: str, ext_params: dict, qudit_dim: int) -> tuple[bool
                 return False, "θ = π/4 is in the Clifford hierarchy (canonical T)"
             return True, (
                 "non-Clifford-hierarchy Z-rotation; Anderson-Jochym-O'Connor "
-                "forbids any qubit stabilizer code with transversal P(θ) at this angle"
+                "forbids any qubit STABILIZER code with transversal P(θ) at this angle."
+                + _NON_STABILIZER_BYPASS
             )
         if ext_kind == "rnd":
             return True, (
                 "generic Haar extension; not exactly synthesisable and not "
-                "a Clifford-hierarchy element"
+                "a Clifford-hierarchy element." + _NON_STABILIZER_BYPASS
             )
         if ext_kind == "mat":
             return True, (
                 "explicit SU(2) matrix; unless it coincides with a Clifford-hierarchy "
                 "element, Anderson-Jochym-O'Connor excludes a direct transversal "
-                "stabilizer-code distillation"
+                "STABILIZER-code distillation." + _NON_STABILIZER_BYPASS
             )
     return False, "no exclusion determined"
 
