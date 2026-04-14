@@ -88,15 +88,19 @@ Wall time for this example is well under a minute on a laptop.
   ```
   Same 3 groups × 10 fixed Haar SU(3) matrices (seed 42). Completes in
   ~2 minutes once the Π(g) cache built by the Tier 1 run is warm.
-- **Table 4 (Lamm Σ(36×3) target-family coverage, `tab:lamm_sigma36`)**:
+- **Table 4 (DSA Σ(36×3) target-family coverage, `tab:lamm_sigma36`)**:
   ```bash
   python -m swiftbot.cli cover-panel \
       --family lamm_sigma36 --base clifford \
       --panel lamm_d2 --workers 7 \
       --db sweep_runs/cover_panel.db
   ```
-  BFS word-tree coverage of 7 candidate extensions against the Lamm
-  primitive-gate target family `T_36`. Completes in ~5 minutes.
+  BFS word-tree coverage of 7 candidate extensions against the DSA
+  (discrete subgroup approximation) primitive-gate target family `T_36`
+  of Lamm *et al.* (arXiv:1903.08807). Completes in ~5 minutes. The
+  `lamm_sigma36` / `lamm_d2` identifiers are retained as internal symbol
+  names for backward compatibility with pre-`v0.2` sweep artefacts; the
+  paper refers to this family as the DSA primitive-gate target family.
 
 All four runs write a single-file SQLite cache under `sweep_runs/`; rerun
 the same command and only the missing rows are recomputed (content-
