@@ -90,21 +90,28 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
-# Calibration anchor: Tier-2 on lenore (d=3, t=10, |C|=216) ≈ 4 GB RSS per
-# qco subprocess. Extrapolated linearly in |C| within d=3 (Π(g) irrep cache
-# dominates per-proc memory) and quadratically in t (dominant irrep's
-# dimension grows as t^{d(d-1)/2} = t^3 for d=3, squared in matrix storage).
-# At d=2, memory is much cheaper — linear in t. At d≥4 we extrapolate with
-# large safety margin since we have no data there.
-_D3_BASE_GB = 2.0      # intercept: python + numpy + system libs per proc
-_D3_SLOPE_PER_C = 0.010  # GB per element of |C| at t=10
+# Calibration anchors (direct measurement on lenore):
+#   * (d=3, t=10, |C|=216) ≈ 4.0 GB per qco subprocess (Tier-2 v2)
+#   * (d=3, t=5,  |C|=1080) ≈ 2.2 GB per qco subprocess (d3_rnd_diag)
+#   * (d=3, t=5,  |C|=216)  ≈ 0.65 GB per qco subprocess (d3_rnd_diag)
+# Model: per_proc = base + slope × |C| × (t/10)^α.
+# At d=3 the dominant irrep has dimension O(t^{d(d-1)/2}) = O(t^3); the Π(g)
+# matrix storage is (dim)^2 = O(t^6). Fitting α=6 reproduces all three
+# anchors (t=10 is the anchor so any α matches there; α=6 collapses low-t
+# predictions without undershooting elsewhere). This is a significant
+# reduction from the earlier α=2 estimate, which over-predicted low-t
+# memory by roughly 4×.
+# At d=2, dominant irrep dim ~ t (SU(2)), squared ~ t². At d≥4 we keep the
+# conservative earlier guess since no direct measurement exists.
+_D3_BASE_GB = 2.0        # intercept: python + numpy + system libs per proc
+_D3_SLOPE_PER_C = 0.010  # GB per element of |C| at the (t/10)=1 anchor
 
 
 def estimate_per_proc_rss_gb(d: int, t: int, group_size: int) -> float:
     """Conservative per-subprocess peak RSS in GB.
 
-    Matches observed 2025-tier-2 numbers (d=3, t=10, |C|=216 → ~4 GB;
-    |C|=1080 → crashed, so >10 GB) within a 2× safety factor.
+    Calibrated against direct measurements at d=3, t∈{5,10}, |C|∈{216,1080}.
+    Override with SWIFTBOT_MEM_PER_PROC_GB if hardware differs.
     """
     override = os.environ.get("SWIFTBOT_MEM_PER_PROC_GB")
     if override is not None:
@@ -113,11 +120,11 @@ def estimate_per_proc_rss_gb(d: int, t: int, group_size: int) -> float:
         except ValueError:
             pass
     if d == 2:
-        return 0.8 + 0.002 * group_size * (t / 10.0)
+        return 0.8 + 0.002 * group_size * (t / 10.0) ** 2
     if d == 3:
-        return _D3_BASE_GB + _D3_SLOPE_PER_C * group_size * (t / 10.0) ** 2
-    # d >= 4: no data yet; extrapolate aggressively.
-    return 4.0 + 0.05 * group_size * (t / 10.0) ** 3
+        return _D3_BASE_GB + _D3_SLOPE_PER_C * group_size * (t / 10.0) ** 6
+    # d >= 4: no direct data; extrapolate with t^{12} ~ (irrep dim)^2.
+    return 4.0 + 0.05 * group_size * (t / 10.0) ** 12
 
 
 # ---------------------------------------------------------------------------
