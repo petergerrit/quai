@@ -42,9 +42,13 @@ from swiftbot.stages.s3_efficiency import extension_fingerprint  # noqa: E402
 
 
 _GROUP_SIZE = {"S216": 216, "S648": 648, "S1080": 1080}
-_SIGMA_LABELS = {"S216": r"$\Sigma(72{\times}3)$",
-                 "S648": r"$\Sigma(216{\times}3)$",
-                 "S1080": r"$\Sigma(360{\times}3)$"}
+# The S216 and S648 δ values are bit-identical for every random SU(3)
+# diagonal at t=5, so we merge them into one panel. S1080 is distinct.
+_PANEL_GROUPS = ["S216", "S1080"]
+_SIGMA_LABELS = {
+    "S216":  r"$\Sigma(72{\times}3) = \Sigma(216{\times}3)$",
+    "S1080": r"$\Sigma(360{\times}3)$",
+}
 
 # ternary scale — the three barycentric coordinates sum to this value.
 SCALE = 1.0
@@ -120,10 +124,12 @@ def main() -> None:
         "P(2pi/5)": (0.0, 2 * np.pi / 5, (-2 * np.pi / 5) % (2 * np.pi)),
     }
 
-    groups = ["S216", "S648", "S1080"]
-
-    # Collect all (point, δ) data per group + gather the global δ range.
-    data: dict[str, list[tuple[tuple[float, float, float], float]]] = {g: [] for g in groups}
+    # Collect (point, δ) data per group + global δ range. Only the groups
+    # we actually plot are populated here (S216 stands in for the
+    # S216=S648 degeneracy).
+    data: dict[str, list[tuple[tuple[float, float, float], float]]] = {
+        g: [] for g in _PANEL_GROUPS
+    }
     all_delta: list[float] = []
     for name, spec in diag_panel:
         fp = extension_fingerprint(spec)
@@ -131,7 +137,7 @@ def main() -> None:
         bary = to_barycentric(p["theta1"], p["theta2"], p["theta3"])
         if bary is None:
             continue
-        for g in groups:
+        for g in _PANEL_GROUPS:
             d = load_best_delta(args.db, fp, _GROUP_SIZE[g])
             if d is None:
                 continue
@@ -151,28 +157,31 @@ def main() -> None:
         if b is not None:
             overlay_bary[name] = b
 
-    # Build the figure: three panels side-by-side with a shared colorbar.
-    fig = plt.figure(figsize=(11.5, 4.2))
-    gs = fig.add_gridspec(1, 4, width_ratios=[1.0, 1.0, 1.0, 0.05], wspace=0.12)
+    # Two panels + colorbar. Square subplot axes so the ternary triangle
+    # renders equilateral (otherwise the default aspect ratio from the
+    # figsize skews it).
+    fig = plt.figure(figsize=(9.0, 4.5))
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.0, 0.04], wspace=0.18)
 
     cmap = matplotlib.colormaps["viridis"]
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
 
-    for idx, g in enumerate(groups):
+    for idx, g in enumerate(_PANEL_GROUPS):
         ax = fig.add_subplot(gs[0, idx])
+        ax.set_aspect("equal")      # equilateral triangle
         _, tax = ternary.figure(ax=ax, scale=SCALE)
         tax.boundary(linewidth=1.2)
         tax.gridlines(color="0.6", multiple=SCALE / 5.0, linewidth=0.5)
         tax.set_title(_SIGMA_LABELS[g], pad=22)
 
-        # Per-edge tick labels in θ/2π units; show fractions 0, 1/5, 2/5, ...
+        # Edge ticks in share-of-sum units 0, 0.2, ..., 1.0.
         tax.ticks(axis="lbr", linewidth=0.8, multiple=SCALE / 5.0,
                   tick_formats="%.1f", offset=0.02, fontsize=7)
         tax.left_axis_label(r"$\theta_3$ share", fontsize=9, offset=0.14)
         tax.right_axis_label(r"$\theta_2$ share", fontsize=9, offset=0.14)
         tax.bottom_axis_label(r"$\theta_1$ share", fontsize=9, offset=0.08)
 
-        # Data points, colored by δ.
+        # Data points colored by δ.
         rows = data[g]
         if rows:
             pts = [bary for bary, _ in rows]
@@ -182,7 +191,7 @@ def main() -> None:
 
         # Structured overlays as red stars.
         if overlay_bary:
-            tax.scatter(list(overlay_bary.values()), marker="*", s=130,
+            tax.scatter(list(overlay_bary.values()), marker="*", s=140,
                         c=[matplotlib.colors.to_rgba("red", 1.0)] * len(overlay_bary),
                         linewidths=0.6, edgecolors="black")
 
@@ -190,7 +199,7 @@ def main() -> None:
         ax.axis("off")
 
     # Shared colorbar panel.
-    cax = fig.add_subplot(gs[0, 3])
+    cax = fig.add_subplot(gs[0, 2])
     sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = fig.colorbar(sm, cax=cax)
