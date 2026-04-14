@@ -74,11 +74,11 @@ def parse_summary(path: Path) -> dict[int, dict[str, float]]:
 
 _EXT_STYLE = [
     ("HV(1,1,0)_campbell",      dict(marker="o",  color="#1f77b4",
-                                     label=r"$\mathrm{HV}(1,1,0)$ Campbell")),
+                                     label=r"$\mathrm{HV}(1,1,0)$")),
     ("HV(1,2,0)_eq27",          dict(marker="s",  color="#ff7f0e",
-                                     label=r"$\mathrm{HV}(1,2,0)$ Eq.~(27)")),
+                                     label=r"$\mathrm{HV}(1,2,0)$")),
     ("HV(2,1,0)",               dict(marker="D",  color="#2ca02c",
-                                     label=r"$\mathrm{HV}(2,1,0)$ new orbit")),
+                                     label=r"$\mathrm{HV}(2,1,0)$")),
     ("P(2pi/9)",                dict(marker="^",  color="#d62728",
                                      label=r"$P(2\pi/9)$")),
     ("P(pi/9)",                 dict(marker="v",  color="#9467bd",

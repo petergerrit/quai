@@ -147,7 +147,7 @@ At prime $d$ the Howard--Vala family~\cite{Howard:2012fva} generalizes $T$ via t
   \HV{z}{\gamma}{\varepsilon} \;=\; \mathcal{N}\cdot \mathrm{diag}\!\left(\zeta_d^{e_0},\, \zeta_d^{e_1},\,\ldots,\,\zeta_d^{e_{d-1}}\right),
   \label{eq:HV_def}
 \end{equation}
-with $\zeta_d = e^{2\pi i / d}$, exponents $e_k = z\,k^3 + 3\gamma\, k^2 + \varepsilon$, and $\mathcal{N}$ a phase chosen so that $\det \HV{z}{\gamma}{\varepsilon} = 1$. The choice $(z,\gamma,\varepsilon) = (1,1,0)$ reproduces Campbell's $M(d)$ magic gate~\cite{Campbell:2012jna}; the choice $(1,2,0)$ gives the Howard--Vala Eq.~(27) variant which is Clifford-equivalent at $d=3$; we probe $(2,1,0)$ as a representative new orbit.
+with $\zeta_d = e^{2\pi i / d}$, exponents $e_k = z\,k^3 + 3\gamma\, k^2 + \varepsilon$, and $\mathcal{N}$ a phase chosen so that $\det \HV{z}{\gamma}{\varepsilon} = 1$. Our panel uses $(z,\gamma,\varepsilon) \in \{(1,1,0),\,(1,2,0),\,(2,1,0)\}$: the first is Campbell's magic gate~\cite{Campbell:2012jna}, the second is the Howard--Vala Eq.~(27) variant (Clifford-equivalent at $d=3$), and the third is a representative new orbit.
 
 Discrete-subgroup approximations of lattice gauge simulations for SU($d$)~\cite{Lamm:2019bik,Gustafson:2022xdt} also pick out a different kind of target. For each chosen qudit group, the continuous degree of freedom reduces to a trace rotation $U_\mathrm{Tr}(\theta)$ that decomposes into a finite set of $R_Z(\alpha_c\,\theta)$ rotations whose coefficients $\alpha_c$ depend on the specific subgroup and encoding. This motivates a \emph{target-family} figure of merit: the mean breadth-first-search depth to synthesize the required $R_Z$ rotations within $\varepsilon \leq 10^{-2}$. We instantiate it for one specific subgroup in \cref{sec:lamm}.
 
@@ -196,7 +196,7 @@ With the \SWIFTbot kernel validated at $d=2$ (\cref{sec:d2}), we turn to the fir
 
 \subsection{Panel specification}\label{sec:d3_setup}
 
-The panel fixes eight extensions per base group, with identical parameters across the three groups. Three are Howard--Vala variants: $\HV{1}{1}{0}$, the Campbell magic gate~\cite{Campbell:2012jna}; $\HV{1}{2}{0}$, the Howard--Vala Eq.~(27) variant~\cite{Howard:2012fva}; and $\HV{2}{1}{0}$, a representative of a previously unreported orbit in the $(z,\gamma,\varepsilon)$ parameter space of \cref{eq:HV_def}. Three are diagonal phase gates $P(\theta)$ at angles $\theta \in \{2\pi/9,\,\pi/9,\,2\pi/5\}$, chosen to span both the cyclotomic-$9$th-root sector relevant to \cref{sec:lamm} and the coarser $2\pi/5$ angle that generates no low-order closure against any of the three base groups. The remaining two slots per group are independent Haar-random batches of size $10$, drawn freshly per subprocess from the invariant measure on $\mathrm{SU}(3)$; these serve as the \emph{rnd} baseline of~\cite{Slowik:2025qco}. All eight extensions survive the Stage~2 universality screen of \cref{sec:qco_sawicki}: each $\Sigma$-series base has one-dimensional adjoint commutant by \cref{eq:comm_dim}, and the bounded closures stay open past the $|\mathcal{C}|\leq 1080$ cap of~\cite{Blichfeldt:1917,Fairbairn:1964}.
+The panel fixes eight extensions per base group, with identical parameters across the three groups. Three are Howard--Vala variants $\HV{1}{1}{0}$, $\HV{1}{2}{0}$, $\HV{2}{1}{0}$ (see \cref{eq:HV_def}). Three are diagonal phase gates $P(\theta)$ at angles $\theta \in \{2\pi/9,\,\pi/9,\,2\pi/5\}$, chosen to span both the cyclotomic-$9$th-root sector relevant to \cref{sec:lamm} and the coarser $2\pi/5$ angle that generates no low-order closure against any of the three base groups. The remaining two slots per group are independent Haar-random batches of size $10$, drawn freshly per subprocess from the invariant measure on $\mathrm{SU}(3)$; these serve as the \emph{rnd} baseline of~\cite{Slowik:2025qco}. All eight extensions survive the Stage~2 universality screen of \cref{sec:qco_sawicki}: each $\Sigma$-series base has one-dimensional adjoint commutant by \cref{eq:comm_dim}, and the bounded closures stay open past the $|\mathcal{C}|\leq 1080$ cap of~\cite{Blichfeldt:1917,Fairbairn:1964}.
 
 The QCO numerics run at $t=5$, the largest design order for which the full panel completes on a single $32$-core workstation within the budget of an interactive session. Fixed extensions use $\mathrm{sample\_size}=1$ (the gate is deterministic); Haar-random batches use $\mathrm{sample\_size}=10$. Each (group, extension) pair is dispatched as an independent \texttt{qco} subprocess with \texttt{OMP\_NUM\_THREADS=1} and \texttt{-{}-workers 8} to keep the per-irrep spectral evaluation of \cref{eq:delta_def} single-threaded while exploiting thread-level parallelism across the $|\mathcal{C}|$ matrix actions described in \cref{sec:methods}. The full Tier-1 panel---$3$~groups $\times\,8$~extensions, with the cached $\pi_\lambda(\mathcal{C})$ tables rebuilt once per group---completes in approximately $17$ minutes of wall time. All numerical values reported below are reproduced bit-identically from the SQLite cache released with the paper~\cite{swiftbot_github}.
 
@@ -215,8 +215,8 @@ $\Sigmathree{72}$  & rnd (batch 1)              & rnd          & $10$ & $0.2506$
 $\Sigmathree{72}$  & rnd (batch 2)              & rnd          & $10$ & $0.2573$ & $0.342 \pm 0.087$ & $3.960$  & $5.013$  & $0.737$ \\
 $\Sigmathree{72}$  & $\HV{2}{1}{0}$ $\checkmark$ & howard\_vala & $1$  & $0.5000$ & ---             & $7.755$  & ---      & $1.443$ \\
 $\Sigmathree{72}$  & $P(2\pi/5)$                & angle        & $1$  & $0.6545$ & ---             & $12.681$ & ---      & $2.360$ \\
-$\Sigmathree{72}$  & $\HV{1}{1}{0}$ Campbell    & howard\_vala & $1$  & $0.6764$ & ---             & $13.750$ & ---      & $2.559$ \\
-$\Sigmathree{72}$  & $\HV{1}{2}{0}$ Eq.~(27)    & howard\_vala & $1$  & $0.6764$ & ---             & $13.750$ & ---      & $2.559$ \\
+$\Sigmathree{72}$  & $\HV{1}{1}{0}$             & howard\_vala & $1$  & $0.6764$ & ---             & $13.750$ & ---      & $2.559$ \\
+$\Sigmathree{72}$  & $\HV{1}{2}{0}$             & howard\_vala & $1$  & $0.6764$ & ---             & $13.750$ & ---      & $2.559$ \\
 $\Sigmathree{72}$  & $P(2\pi/9)$                & angle        & $1$  & $0.8830$ & ---             & $43.208$ & ---      & $8.041$ \\
 $\Sigmathree{72}$  & $P(\pi/9)$                 & angle        & $1$  & $0.9698$ & ---             & $175.561$ & ---     & $32.671$ \\
 \midrule
@@ -224,8 +224,8 @@ $\Sigmathree{216}$  & rnd (batch 1)             & rnd          & $10$ & $0.1463$
 $\Sigmathree{216}$  & rnd (batch 2)             & rnd          & $10$ & $0.1627$ & $0.286 \pm 0.133$ & $3.565$  & $5.171$  & $0.551$ \\
 $\Sigmathree{216}$  & $\HV{2}{1}{0}$ $\checkmark$ & howard\_vala & $1$  & $0.5000$ & ---             & $9.340$  & ---      & $1.443$ \\
 $\Sigmathree{216}$  & $P(2\pi/5)$                & angle        & $1$  & $0.6545$ & ---             & $15.273$ & ---      & $2.360$ \\
-$\Sigmathree{216}$  & $\HV{1}{1}{0}$ Campbell    & howard\_vala & $1$  & $0.6764$ & ---             & $16.561$ & ---      & $2.559$ \\
-$\Sigmathree{216}$  & $\HV{1}{2}{0}$ Eq.~(27)    & howard\_vala & $1$  & $0.6764$ & ---             & $16.561$ & ---      & $2.559$ \\
+$\Sigmathree{216}$  & $\HV{1}{1}{0}$             & howard\_vala & $1$  & $0.6764$ & ---             & $16.561$ & ---      & $2.559$ \\
+$\Sigmathree{216}$  & $\HV{1}{2}{0}$             & howard\_vala & $1$  & $0.6764$ & ---             & $16.561$ & ---      & $2.559$ \\
 $\Sigmathree{216}$  & $P(2\pi/9)$                & angle        & $1$  & $0.8830$ & ---             & $52.039$ & ---      & $8.041$ \\
 $\Sigmathree{216}$  & $P(\pi/9)$                 & angle        & $1$  & $0.9698$ & ---             & $211.443$ & ---     & $32.671$ \\
 \midrule
@@ -233,8 +233,8 @@ $\Sigmathree{360}$ & rnd (batch 2)              & rnd          & $10$ & $0.1048$
 $\Sigmathree{360}$ & rnd (batch 1)              & rnd          & $10$ & $0.1211$ & $0.187 \pm 0.063$ & $3.308$  & $4.163$  & $0.473$ \\
 $\Sigmathree{360}$ & $\HV{2}{1}{0}$ $\checkmark$ & howard\_vala & $1$  & $0.5698$ & ---             & $12.419$ & ---      & $1.775$ \\
 $\Sigmathree{360}$ & $P(2\pi/5)$                & angle        & $1$  & $0.6545$ & ---             & $16.478$ & ---      & $2.360$ \\
-$\Sigmathree{360}$ & $\HV{1}{1}{0}$ Campbell    & howard\_vala & $1$  & $0.6764$ & ---             & $17.867$ & ---      & $2.559$ \\
-$\Sigmathree{360}$ & $\HV{1}{2}{0}$ Eq.~(27)    & howard\_vala & $1$  & $0.6764$ & ---             & $17.867$ & ---      & $2.559$ \\
+$\Sigmathree{360}$ & $\HV{1}{1}{0}$             & howard\_vala & $1$  & $0.6764$ & ---             & $17.867$ & ---      & $2.559$ \\
+$\Sigmathree{360}$ & $\HV{1}{2}{0}$             & howard\_vala & $1$  & $0.6764$ & ---             & $17.867$ & ---      & $2.559$ \\
 $\Sigmathree{360}$ & $P(2\pi/9)$                & angle        & $1$  & $0.8830$ & ---             & $56.145$ & ---      & $8.041$ \\
 $\Sigmathree{360}$ & $P(\pi/9)$                 & angle        & $1$  & $0.9698$ & ---             & $228.127$ & ---     & $32.671$ \\
 \bottomrule
@@ -379,8 +379,8 @@ Clifford$+\mathrm{rnd}$, \texttt{hurwitz}$+\mathrm{rnd}$ ($d=2$) & generic $\mat
 $\Sigma$-series$+\mathrm{rnd}$ ($d=3$) & generic $\mathrm{SU}(3)$ (no ring) & \textsc{none}: not exactly synthesisable; no cataloged qutrit transversal classification for $\Sigma$-series & --- \\
 \midrule
 \multicolumn{4}{@{}l}{\emph{$d=3$ structured (\cref{sec:d3})}} \\
-$\Sigma+\HV{1}{1}{0}$ Campbell, $\Sigma+\HV{1}{2}{0}$ Eq.~(27) & \texttt{Z[$\omega_9$]} & \textsc{partial}: qutrit triorthogonal $[[9m\!-\!k,k,2]]_3$ distills Howard--Vala magic state; $\Sigma$-series transversal pairing unestablished & \cite{Campbell:2012jna} \\
-$\Sigma+\HV{2}{1}{0}$ (new orbit)   & \texttt{Z[$\omega_9$]}            & \textsc{partial}: cousin Campbell--Anwar--Browne qutrit triorthogonal; no protocol certified for this orbit & \cite{Campbell:2012jna} \\
+$\Sigma+\HV{1}{1}{0}$, $\Sigma+\HV{1}{2}{0}$ & \texttt{Z[$\omega_9$]} & \textsc{partial}: qutrit triorthogonal $[[9m\!-\!k,k,2]]_3$ distills Howard--Vala magic state; $\Sigma$-series transversal pairing unestablished & \cite{Campbell:2012jna} \\
+$\Sigma+\HV{2}{1}{0}$             & \texttt{Z[$\omega_9$]}            & \textsc{partial}: cousin Campbell--Anwar--Browne qutrit triorthogonal; no protocol certified for this orbit & \cite{Campbell:2012jna} \\
 $\Sigma+P(2\pi/9)$ ($d=3$)          & \texttt{Z[$\omega_9$]}            & \textsc{partial}: qutrit-native $\omega_9$ phase; Campbell--Anwar--Browne applies modulo transversal pairing & \cite{Campbell:2012jna} \\
 $\Sigma+P(\pi/9)$ ($d=3$)           & \texttt{Z[$\omega_{18}$]}           & \textsc{none}: $\omega_{18}$ outside Campbell--Anwar--Browne; no cousin at $d=3$ & --- \\
 $\Sigma+P(2\pi/5)$ ($d=3$)          & \texttt{Z[$\omega_{10}$]}           & \textsc{none}: $\omega_{10}$ not in any qutrit stabilizer setting; no cousin & --- \\
