@@ -4,13 +4,13 @@ Produce the qudit pi/8 gate (U_upsilon) as defined in Howard & Vala (2012),
 
 Convention
 ----------
-For prime p > 3 (Eq. 22):
+For prime p > 3 (Eq. 24, closed-form of the recurrence Eq. 23):
     U_upsilon = diag(omega^{v_0}, ..., omega^{v_{p-1}})
     where omega = e^{2*pi*i/p} and
     v_k = (1/12) * k * { gamma' + k * [6*z' + (2k-3)*gamma'] } + k*epsilon  (mod p)
     with v_0 = 0 (boundary condition).
 
-For p = 3 (Eq. 25):
+For p = 3 (Eq. 27):
     U_upsilon = diag(zeta^{v_0}, zeta^{v_1}, zeta^{v_2})
     where zeta = e^{2*pi*i/9} (9th root of unity) and
     v = (0, 6z' + 2*gamma' + 3*epsilon, 6z' + gamma' + 6*epsilon) mod 9
@@ -33,7 +33,7 @@ from sympy import isprime, mod_inverse
 
 def sun_T_gate_p3(z: int, gamma: int, eps: int) -> tuple[np.ndarray, np.ndarray]:
     """
-    Qutrit (p=3) U_upsilon gate via Eq. (25).
+    Qutrit (p=3) U_upsilon gate via Eq. (27).
     Phases are 9th roots of unity: zeta = e^{2*pi*i/9}.
     """
     zeta = np.exp(2j * np.pi / 9)
@@ -48,7 +48,7 @@ def sun_T_gate_p3(z: int, gamma: int, eps: int) -> tuple[np.ndarray, np.ndarray]
 
 def sun_T_gate_general(p: int, z: int, gamma: int, eps: int) -> tuple[np.ndarray, np.ndarray]:
     """
-    U_upsilon for prime p > 3 via Eq. (22).
+    U_upsilon for prime p > 3 via Eq. (24).
     Phases are p-th roots of unity: omega = e^{2*pi*i/p}.
     All arithmetic modulo p.
     """
