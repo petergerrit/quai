@@ -3,3 +3,5 @@ scipy>=1.11,<2
 anthropic>=0.39,<1
 pydantic>=2.6,<3
 pytest>=8.0,<9
+matplotlib>=3.8,<4
+python-ternary>=1.0,<2
