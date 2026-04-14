@@ -155,7 +155,7 @@ repository as follows.
   Kubischta--Teixeira (2b+3)-qubit PI family). Returns a "research
   needed" marker and an EC Zoo pointer when no curated match exists.
 - **Stage 5: distillation protocols** --- `swiftbot/tools/distillation.py`.
-  Nine curated protocols spanning four target-gate families:
+  Ten curated protocols spanning five target-gate families:
   Bravyi--Kitaev 15-to-1 and Bravyi--Haah triorthogonal for `qubit T`;
   Bravyi--Haah CCZ for `qubit CCZ`; Duclos-Cianci--Poulin,
   Campbell--O'Gorman, and Campbell--Howard for `qubit Z-rotation
@@ -164,8 +164,12 @@ repository as follows.
   Ouyang--Jing--Brennen PI code-switching for `qubit rational-angle
   (non-stabilizer code-switching)` (a second AJOC bypass that does not
   route through Clifford+T); Campbell--Anwar--Browne qutrit triorthogonal
-  [[9m-k,k,2]]_3 for `qutrit T`; and ternary Golay strange-state for
-  `qutrit strange`. `family_for_extension(spec)` coarse-tags extensions
+  [[9m-k,k,2]]_3 for `qutrit T`; ternary Golay strange-state for
+  `qutrit strange`; and the Cervia--Lamm--Liu--Murairi--Zhu
+  asymptotically-good triorthogonal codes on $\mathbb{F}_{2^{2m}}$ for
+  `qudit CCZ` at $q=64$ (constant-space overhead, with a constant-depth
+  reduction circuit to convert qudit $|CCZ\rangle$ back to qubit
+  $|CCZ\rangle$). `family_for_extension(spec)` coarse-tags extensions
   into one of these families; `ajoc_excluded(spec, d)` reports whether
   the Anderson--Jochym-O'Connor classification forbids a direct
   stabilizer-code transversal implementation.

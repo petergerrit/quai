@@ -220,7 +220,7 @@ def test_catalog_growth_matches_documentation() -> None:
     assert len(codes.list_all_codes()) == 12, (
         f"codes catalog changed: README claims 12, got {len(codes.list_all_codes())}"
     )
-    assert len(distillation.list_all_protocols()) == 9, (
-        f"distillation catalog changed: README claims 9, got "
+    assert len(distillation.list_all_protocols()) == 10, (
+        f"distillation catalog changed: README claims 10, got "
         f"{len(distillation.list_all_protocols())}"
     )

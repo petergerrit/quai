@@ -137,11 +137,34 @@ _PROTOCOLS: list[DistillationRecord] = [
         qudit_dim=3,
         code_name="Qutrit triorthogonal [[20,7,2]]_3",
         yield_parameter=1.51,
-        reference="Low-overhead qutrit MSD, Quantum 9, 1768 (2025)",
+        reference="Prakash & Saha, Quantum 9, 1768 (2025) [arXiv:2403.06228]",
         notes=(
             "Family [[9m-k,k,2]]_3 triorthogonal qutrit codes. "
             "The [[20,7,2]]_3 member has γ=1.51, beating all qubit triorthogonal "
             "codes with n < ~300 physical qudits. Applicable to the Howard-Vala T family."
+        ),
+    ),
+    # --- Higher-dimensional qudit constant-overhead CCZ distillation ---
+    DistillationRecord(
+        protocol_name="Cervia-Lamm-Liu-Murairi-Zhu AG-qudit CCZ",
+        target_gate_family="qudit CCZ (q=64)",
+        qudit_dim=64,
+        code_name="Asymptotically-good triorthogonal codes on F_{2^{2m}}",
+        yield_parameter=0.0,  # constant-space overhead (γ → 0 asymptotically)
+        reference="Cervia, Lamm, Liu, Murairi & Zhu, arXiv:2512.21874 (2025)",
+        notes=(
+            "Constant-space-overhead magic-state distillation on qudits of "
+            "dimension q = 2^(2m), m ≥ 3 (i.e. q ≥ 64). First triorthogonal "
+            "code family on F_{2^{2m}} that beats the Tsfasman-Vlăduţ-Zink "
+            "bound. Distills |CCZ⟩ at constant space overhead, far better "
+            "than the γ > 0 scaling of qubit triorthogonal codes. A "
+            "constant-depth Clifford circuit converts the qudit |CCZ⟩ down "
+            "to qubit |CCZ⟩ via ≤9 measurements, so the construction is "
+            "usable as a qubit-MSD drop-in as well. Builds on and "
+            "generalises Golowich & Guruswami (STOC 2024, arXiv:2408.09254) "
+            "and Nguyen (STOC 2025) for the binary case, and Krishna & "
+            "Tillich (PRL 123, 070507) for the low-overhead qudit-MSD "
+            "programme more broadly."
         ),
     ),
     DistillationRecord(
