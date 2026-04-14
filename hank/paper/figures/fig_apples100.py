@@ -82,38 +82,68 @@ def main(db_path: str = "sweep_runs/apples100_t5.db"):
                                          gridspec_kw={"height_ratios": [1.0, 1.2]})
 
     colors = {"S216": "C0", "S648": "C1", "S1080": "C2"}
-    labels = {"S216": r"$\Sigma(72\!\times\!3)$ ($|\mathcal{C}|\!=\!216$)",
-              "S648": r"$\Sigma(216\!\times\!3)$ ($|\mathcal{C}|\!=\!648$)",
-              "S1080": r"$\Sigma(360\!\times\!3)$ ($|\mathcal{C}|\!=\!1080$)"}
+    labels = {"S216": r"$\Sigma(72\!\times\!3)$",
+              "S648": r"$\Sigma(216\!\times\!3)$",
+              "S1080": r"$\Sigma(360\!\times\!3)$"}
+    markers = {"S216": "o", "S648": "s", "S1080": "^"}
 
-    # Top: overlaid histograms
+    # Top: overlaid step histograms + vertical mean lines + ±σ bands.
     bins = np.linspace(0.05, 0.60, 28)
     for g_name in ("S216", "S648", "S1080"):
         rows = data[g_name]
         if not rows:
             continue
         deltas = np.array([d for _, d in rows])
-        ax_top.hist(deltas, bins=bins, histtype="step", lw=1.8,
-                    color=colors[g_name],
-                    label=f"{labels[g_name]}  mean={deltas.mean():.3f}, std={deltas.std():.3f}")
+        mu, sigma = deltas.mean(), deltas.std()
+        ax_top.hist(deltas, bins=bins, histtype="step", lw=1.6,
+                    color=colors[g_name], label=labels[g_name])
+        # Horizontal ±σ band at a fixed y near the top of each group's
+        # histogram — makes mean and width readable without cluttering.
+    # Stack the mean/σ bars above the histograms so they don't clash
+    # with the step lines themselves.
+    _, top_y = ax_top.get_ylim()
+    band_y = [top_y * 1.05, top_y * 1.13, top_y * 1.21]
+    for i, g_name in enumerate(("S216", "S648", "S1080")):
+        rows = data[g_name]
+        if not rows:
+            continue
+        deltas = np.array([d for _, d in rows])
+        mu, sigma = deltas.mean(), deltas.std()
+        y = band_y[i]
+        ax_top.hlines(y, mu - sigma, mu + sigma, color=colors[g_name],
+                      lw=3.0, alpha=0.65, zorder=5)
+        ax_top.plot(mu, y, marker="|", color=colors[g_name],
+                    markersize=12, mew=2.0, zorder=6)
+    ax_top.set_ylim(0, top_y * 1.30)
     ax_top.set_xlabel(r"$\delta$")
     ax_top.set_ylabel("count (of 100)")
-    ax_top.legend(fontsize=7, loc="upper right", frameon=False)
+    ax_top.legend(fontsize=8, loc="upper right", frameon=False)
     ax_top.set_title(r"apples-100 panel: $\delta$ per base group at $d=3,\,t=5$")
 
-    # Bottom: per-matrix scatter, x = apple_id
+    # Bottom: per-matrix scatter with distinct markers; no connecting
+    # lines — just points. A faint horizontal band shows mean ± σ per
+    # group for context.
     for g_name in ("S216", "S648", "S1080"):
         rows = sorted(data[g_name])
         if not rows:
             continue
+        deltas_arr = np.array([d for _, d in rows])
+        mu, sigma = deltas_arr.mean(), deltas_arr.std()
+        ax_bot.axhspan(mu - sigma, mu + sigma, color=colors[g_name],
+                       alpha=0.10, zorder=0)
+        ax_bot.axhline(mu, color=colors[g_name], alpha=0.5, lw=0.8,
+                       ls="--", zorder=1)
         xs = [k for k, _ in rows]
         ys = [d for _, d in rows]
-        ax_bot.plot(xs, ys, "o-", color=colors[g_name], markersize=3, lw=0.5,
-                    alpha=0.75, label=labels[g_name])
+        ax_bot.plot(xs, ys, linestyle="none", marker=markers[g_name],
+                    markersize=5, color=colors[g_name],
+                    markerfacecolor=colors[g_name],
+                    markeredgecolor=colors[g_name],
+                    alpha=0.85, label=labels[g_name], zorder=2)
     ax_bot.set_xlabel("matrix id (seed=42 Haar draw)")
     ax_bot.set_ylabel(r"$\delta$")
-    ax_bot.grid(True, alpha=0.25)
-    ax_bot.legend(fontsize=7, loc="upper right", frameon=False)
+    ax_bot.grid(True, alpha=0.2, zorder=-1)
+    ax_bot.legend(fontsize=8, loc="upper right", frameon=False)
 
     fig.tight_layout()
     out = Path(__file__).resolve().parent / "fig_apples100.pdf"

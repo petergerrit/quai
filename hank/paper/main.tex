@@ -181,20 +181,22 @@ We validate the \SWIFTbot QCO kernel against the $d=2$ reference dataset of S{\l
 
 \emph{Two remarks.} First, Clifford$+T$ is about $14\times$ worse than Haar-random on $\QT$ ($51.9$ vs $3.79$)---commensurability between $P(\pi/4)$ and the Clifford orbit slows the Haar random walk by more than an order of magnitude in the approximation exponent~\cite{Slowik:2025qco}. This is a $\QT$ claim, not a verdict on Clifford$+T$ itself: when the target is structured (\cref{sec:lamm}), the ranking inverts. Second, the \texttt{BI} ratio $\QT/\Popt \approx 1.27$ at $10^4$ samples is far closer to saturation than Clifford's and arrives with a cataloged fault-tolerant code~\cite{Kubischta:2I}; the empirical $\delta$ distribution on \texttt{BI} has median $0.38$ ($\QT\simeq 4.97$) and $5$th-percentile $0.31$, so the best-of-$10^4$ floor is the natural super-golden candidate predicted by~\cite{Sarnak:2015}.
 
-\begin{table*}[t]
+\begin{table}[t]
 \centering
-\caption{\label{tab:d2_validation}$d=2$ validation of the \SWIFTbot QCO kernel against the reference dataset of S{\l}owik, Duli{\'a}n, and Sawicki~\cite{Slowik:2025qco}. All values computed at $t=50$; the Haar-random (rnd) rows report the best $\QT$ across the stated number of samples drawn from the invariant measure on $\mathrm{SU}(2)$; the fixed-diagonal row is deterministic. The $\Popt$ column is the Kesten--McKay floor of \cref{eq:Popt}. Reference values are the $t\to\infty$ headline numbers of~\cite{Slowik:2025qco} when available; \texttt{BI} has no published QCO reference.}
-\begin{tabular}{llccc}
+\caption{\label{tab:d2_validation}$d=2$ validation of the \SWIFTbot QCO kernel against the reference dataset of S{\l}owik, Duli{\'a}n, and Sawicki~\cite{Slowik:2025qco}, all at $t=50$. The Clifford$+P(\pi/4)$ row is deterministic; rnd rows report the best $\QT$ across $20$ Haar-$\mathrm{SU}(2)$ samples for Clifford and \texttt{hurwitz}, and $10^4$ samples for \texttt{BI}. $\Popt$ is the Kesten--McKay floor of \cref{eq:Popt}; \texttt{BI} has no published QCO reference.}
+\begin{tabular}{@{}llccc@{}}
 \toprule
-Base ($|\mathcal{C}|$) & Extension & $\QT$ (this work) & $\QT$~\cite{Slowik:2025qco} & $\Popt$ \\
+                    &           & \multicolumn{2}{c}{$\QT$} & \\
+\cmidrule(lr){3-4}
+Base ($|\mathcal{C}|$) & Ext.   & this work & \cite{Slowik:2025qco} & $\Popt$ \\
 \midrule
-Clifford ($24$)         & $P(\pi/4)$              & $51.91$ & $\approx 52$             & $3.47$ \\
-Clifford ($24$)         & rnd (best of $20$)      & $3.79$  & $\approx 3.7$            & $3.47$ \\
-\texttt{hurwitz} ($12$) & rnd (best of $20$)      & $4.34$  & $\approx 4.0$            & $4.19$ \\
-\texttt{BI} ($120$)     & rnd (best of $10^4$)    & $3.57$  & ---                      & $2.81$ \\
+Clifford ($24$)         & $P(\pi/4)$ & $51.91$ & $\approx 52$  & $3.47$ \\
+Clifford ($24$)         & rnd        & $3.79$  & $\approx 3.7$ & $3.47$ \\
+\texttt{hurwitz} ($12$) & rnd        & $4.34$  & $\approx 4.0$ & $4.19$ \\
+\texttt{BI} ($120$)     & rnd        & $3.57$  & ---           & $2.81$ \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{$d=3$ survey}\label{sec:d3}
@@ -341,25 +343,25 @@ Given a qubit base group $\mathcal{C}$ and single-gate extension $g$, \SWIFTbot 
 \paragraph*{Result.}
 \cref{tab:lamm_sigma36} ranks the candidates at BFS depth $15$, $\varepsilon = 10^{-2}$, $N_\theta = 10$ per continuous coefficient. The Clifford$+P(2\pi/9)$ extension attains mean projective distance $0.0122$ on $\mathcal{T}_{36}$ with $27$ of $58$ targets hit below $\varepsilon$, while the canonical Clifford$+T$ extension attains mean distance $0.0833$ with only $5$ hits---a factor $6.8\times$ separation in mean distance. The equivalence class of $P(2\pi k/18)$ with $\gcd(k,18)=1$ (which includes $P(\pi/9)$ and $P(\pi/18)$) all saturate the discrete $9$th-root targets, a direct consequence of $\langle \mathrm{Clifford}, P(2\pi/9)\rangle$ closing at a finite group of $\sim\! 3\times 10^4$ elements; the algebraic ring $\mathbb{Z}[\omega_{18}, \tfrac{1}{2}]$ supplies every $9$th-root phase via a short word. Within this equivalence class, Clifford$+P(\pi/18)$ marginally edges Clifford$+P(2\pi/9)$ at depth $15$ (mean $0.0104$ vs.\ $0.0122$; $34$ vs.\ $27$ hits), reflecting the strictly larger $18$th-root coverage: $P(\pi/18)$ generates $\omega_{36}$, which contains both the $9$th- and $18$th-root phases of $U_F$. Crucially, the super-golden extensions $T_{24}$ and $T_{12}$---which optimize $\QT$ for Clifford and for the $12$-element projective $A_4$ base \texttt{hurwitz} respectively~\cite{Sarnak:2015}---perform \emph{worse} on $\mathcal{T}_{36}$ than the rational-angle rows: their algebra $\mathbb{Z}[i,\sqrt{2}]$ does not contain $\omega_9$, so they cannot reach the $9$th-root targets exactly at any depth; on the $|\mathcal{C}|=12$ \texttt{hurwitz} base the $T_{12}$ extension hits zero targets at depth $15$. The \texttt{hurwitz}$+P(\pi/18)$ row is competitive ($35$ hits, mean $0.0112$) and does so with a strictly \emph{smaller} base group: in the target-family regime the overhead advantage tracks the cyclotomic content of the extension, not the size of the base.
 
-\begin{table*}[t]
+\begin{table}[t]
 \centering
-\caption{\label{tab:lamm_sigma36}DSA $\Sigmathree{36}$ target-family coverage at BFS depth $15$, $\varepsilon = 10^{-2}$, $10$ continuous $\theta$-samples per $\alpha_c$. The ``hits'' column counts all $58$ targets (the $8$ discrete $9$th-root phases in \cref{eq:T36} plus $50$ continuous $R_Z(\alpha_c\theta)$ samples) reached below $\varepsilon$; rational-angle rows in the $\omega_{18}$ class hit all $8$ discrete targets. Mean distance is across all $58$ targets; lower is better. $\langle T\rangle_{\rm hit}$ is the mean $T$-count along words reaching a hit target. Cost method indicates whether the $T$-count is certified: Ross--Selinger~\cite{Ross:2014kbr} exact synthesis (\texttt{rs\_exact}) or \SWIFTbot BFS estimate (\texttt{bfs\_estimate}). All numbers are reproduced by \texttt{swiftbot cover-panel --family lamm\_sigma36 --max-depth 15}.}
-\begin{tabular}{lccccl}
+\caption{\label{tab:lamm_sigma36}DSA $\Sigmathree{36}$ target-family coverage at BFS depth $15$, $\varepsilon = 10^{-2}$, $10$ continuous $\theta$-samples per $\alpha_c$. ``hits'' counts the $58$ targets (the $8$ discrete $9$th-root phases in \cref{eq:T36} plus $50$ continuous $R_Z(\alpha_c\theta)$ samples) reached below $\varepsilon$. ``mean/max'' are projective distances across all $58$; lower is better. $\langle T\rangle$ is the mean $T$-count along hit words. ``method'' is \texttt{rs} for Ross--Selinger~\cite{Ross:2014kbr} exact synthesis and \texttt{bfs} for the \SWIFTbot BFS estimate; all rows are \texttt{bfs} except the canonical $P(\pi/4)$.}
+\begin{tabular}{@{}lccccl@{}}
 \toprule
-Base \,+\, extension & hits/$58$ & mean dist & max dist & $\langle T\rangle_{\rm hit}$ & cost method \\
+Base $+$ ext. & hits & mean & max & $\langle T\rangle$ & method \\
 \midrule
-Clifford$+P(\pi/18)$          & $34$ & $0.0104$ & $0.0420$ & $2.79$ & \texttt{bfs\_estimate} \\
-\texttt{hurwitz}$+P(\pi/18)$  & $35$ & $0.0112$ & $0.0420$ & $5.37$ & \texttt{bfs\_estimate} \\
-Clifford$+P(\pi/9)$           & $27$ & $0.0120$ & $0.0401$ & $2.04$ & \texttt{bfs\_estimate} \\
-Clifford$+P(2\pi/9)$          & $27$ & $0.0122$ & $0.0401$ & $2.11$ & \texttt{bfs\_estimate} \\
-Clifford$+P(\pi/8)$           &  $7$ & $0.0221$ & $0.0387$ & $0.29$ & \texttt{bfs\_estimate} \\
-Clifford$+T_{24}$             &  $6$ & $0.0228$ & $0.0465$ & $0.83$ & \texttt{bfs\_estimate} \\
-Clifford$+T_{12}$             &  $8$ & $0.0233$ & $0.0474$ & $1.88$ & \texttt{bfs\_estimate} \\
-\texttt{hurwitz}$+T_{12}$     &  $0$ & $0.0313$ & $0.0573$ & ---    & \texttt{bfs\_estimate} \\
-Clifford$+P(\pi/4)$           &  $5$ & $0.0833$ & $0.1554$ & $0.00$ & \texttt{rs\_exact} \\
+Clifford$+P(\pi/18)$          & $34$ & $0.0104$ & $0.0420$ & $2.79$ & \texttt{bfs} \\
+\texttt{hurwitz}$+P(\pi/18)$  & $35$ & $0.0112$ & $0.0420$ & $5.37$ & \texttt{bfs} \\
+Clifford$+P(\pi/9)$           & $27$ & $0.0120$ & $0.0401$ & $2.04$ & \texttt{bfs} \\
+Clifford$+P(2\pi/9)$          & $27$ & $0.0122$ & $0.0401$ & $2.11$ & \texttt{bfs} \\
+Clifford$+P(\pi/8)$           &  $7$ & $0.0221$ & $0.0387$ & $0.29$ & \texttt{bfs} \\
+Clifford$+T_{24}$             &  $6$ & $0.0228$ & $0.0465$ & $0.83$ & \texttt{bfs} \\
+Clifford$+T_{12}$             &  $8$ & $0.0233$ & $0.0474$ & $1.88$ & \texttt{bfs} \\
+\texttt{hurwitz}$+T_{12}$     &  $0$ & $0.0313$ & $0.0573$ & ---    & \texttt{bfs} \\
+Clifford$+P(\pi/4)$           &  $5$ & $0.0833$ & $0.1554$ & $0.00$ & \texttt{rs}  \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 \begin{figure}[t]
 \centering
