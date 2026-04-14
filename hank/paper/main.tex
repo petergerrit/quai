@@ -288,6 +288,25 @@ A paper-scale rerun at $N=100$ matrices (same \texttt{seed}\,$=42$; the first te
 \caption{\label{fig:apples100}Apples-to-apples Haar panel at $N=100$ matrices (\texttt{seed}\,$=42$) on the three $d=3$ $\Sigma$-series base groups. Top: overlaid $\delta$ histograms. Bottom: per-matrix $\delta$ for each group; matrix id $0$--$9$ coincides with the ten-matrix subset of \cref{tab:d3_apples}. The monotone reduction $\mu_{216}>\mu_{648}>\mu_{1080}$ predicted by Finding~3 is now resolved at $\sim\!5.7\sigma/\sqrt{N}$; the single \texttt{apple05} outlier visible as the $\Sigmathree{360}$ peak near $\delta\simeq 0.44$ is the one that inverted the ten-matrix ordering in \cref{tab:d3_apples}.}
 \end{figure}
 
+\subsection{Random-diagonal ternary scan}\label{sec:d3_ternary}
+
+The Tier-1 and Tier-2 panels show a striking feature: five of six structured diagonal and Howard--Vala extensions give $\delta$ values identical to four decimals across $\Sigmathree{72}$ and $\Sigmathree{216}$. A natural question is whether this four-decimal degeneracy is specific to the cyclotomic content of the panel's three phases $P(2\pi/9), P(\pi/9), P(2\pi/5)$, or whether it applies to the full maximal torus of $\mathrm{SU}(3)$. We answer by scanning $N=50$ random $\mathrm{SU}(3)$ diagonal extensions $\mathrm{diag}(e^{i\theta_1}, e^{i\theta_2}, e^{i\theta_3})$ (\texttt{seed}\,$=42$, $\theta_1, \theta_2$ uniform on $[0,2\pi)$, $\theta_3 = -\theta_1-\theta_2 \mod 2\pi$) on all three base groups at $t=5$, a $3 \times 50 = 150$-evaluation panel completed in $\sim\!14$ minutes of wall time on a 32-core node.
+
+The result is stronger than the structured-panel observation: for every one of the $50$ random diagonals, the $\delta$ value on $\Sigmathree{72}$ and $\Sigmathree{216}$ agrees \emph{bit-for-bit}, while $\Sigmathree{360}$ is generically distinct. Per-group summary statistics (best / mean / max) across the $50$ samples are
+\begin{IEEEeqnarray}{rCl}
+\Sigmathree{72},\ \Sigmathree{216} \ &:& \ 0.4516 \ / \ 0.6769 \ / \ 0.9921, \\
+\Sigmathree{360}\ &:& \ 0.2539 \ / \ 0.5106 \ / \ 0.9662.
+\end{IEEEeqnarray}
+\cref{fig:d3_rnd_diag_ternary} plots the full distribution on the SU(3) maximal-torus simplex; the $\Sigma$-series base groups have a permutation subgroup (the qutrit Clifford contains SU(3) Weyl elements), so each random-diagonal point is $S_3$-symmetrized to six positions with the same $\delta$, exposing the full torus symmetry.
+
+The Finding-1 degeneracy is therefore \emph{not} a property of the cyclotomic angles we chose to probe but a structural property of the nested-subgroup relation $\Sigmathree{72} \subset \Sigmathree{216}$: at $t=5$, the dominant $t$-design irreps of $\mathrm{SU}(3)$ restrict to representations that both groups act on identically, so any diagonal extension couples through the same spectral channel on both. $\Sigmathree{360}$ does not sit in this chain, hence its breakout. A $t=10$ rerun would test whether a subdominant irrep of $\Sigmathree{216}$ that is absent in $\Sigmathree{72}$ becomes spectrally visible and lifts the degeneracy.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_d3_rnd_diag_ternary.pdf}
+\caption{\label{fig:d3_rnd_diag_ternary}$\delta$ on the $\mathrm{SU}(3)$ maximal torus at $t=5$. Each panel shows the 50 random-diagonal extensions of \cref{sec:d3_ternary}, $S_3$-symmetrized to six copies each (300 points per panel). The left panel, labeled $\Sigmathree{72}$ \& $\Sigmathree{216}$, reports the $\delta$ values that are bit-for-bit identical on the two smaller $\Sigma$-series groups; the right panel reports $\Sigmathree{360}$. Red stars mark the three structured rational-angle extensions $P(2\pi/9), P(\pi/9), P(2\pi/5)$ from \cref{tab:d3_tier1}, colored by their own $\delta$ on each group; they sit on the $\theta_1=0$ edge because each has the form $\mathrm{diag}(1, e^{i\theta}, e^{-i\theta})$.}
+\end{figure}
+
 \subsection{Best achievable $\QT$}\label{sec:d3_best}
 
 Combining the two panels, the best (group, extension) pair is \texttt{apple04} on $\Sigmathree{360}$ at $t=5$ with $\delta = 0.1197$ and $\QT = 3.291$---within $32\%$ of $\Popt = 2.495$. At $t=10$ the best fixed extension is $\HV{2}{1}{0}$ on $\Sigmathree{72}$, with $\QT = 10.28$, a factor $3.8$ above $\Popt = 2.692$. The shape of the ranking is the same at both $t$: Haar-random extensions dominate every structured extension, $\HV{2}{1}{0}$ leads the structured field, and the three diagonal-phase angles $P(2\pi/9), P(\pi/9), P(2\pi/5)$ all give worse $\QT$ than even the worst Howard--Vala variant. The narrow-angle $P(\pi/9)$ in particular produces $\delta$ within $3\%$ of unity, inflating $\QT$ by two orders of magnitude relative to the Haar baseline---a direct analogue of the $14\times$ Clifford$+T$ penalty at $d=2$ (\cref{sec:d2}).
@@ -330,6 +349,12 @@ Clifford$+P(\pi/4)$           &  $5$ & $0.0833$ & $0.1554$ & $0.00$ & \texttt{rs
 \bottomrule
 \end{tabular}
 \end{table*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_lamm_sigma36.pdf}
+\caption{\label{fig:lamm_sigma36}DSA $\Sigmathree{36}$ target-family coverage from \cref{tab:lamm_sigma36}: hits/$58$ versus mean projective distance on $\mathcal{T}_{36}$ at BFS depth $15$, $\varepsilon=10^{-2}$. Canonical Clifford$+T$ (red, \texttt{rs\_exact} certified) sits bottom-right with the largest mean distance and only $5$ hits. Rational-angle $P(k\pi/18)$ extensions (blue, \texttt{bfs\_estimate}) cluster top-left with many hits at an order of magnitude smaller distance; super-golden $T_{12}$/$T_{24}$ rows fall in between despite saturating $\Popt$ (\cref{sec:d2}). The visual separation matches the $6.8\times$ headline.}
+\end{figure}
 
 \paragraph*{Interpretation.}
 Clifford$+P(2\pi/9)$ is worse on $\QT$ than Clifford$+T$ yet $6.8\times$ better on mean depth over $\mathcal{T}_{36}$. The reason is structural: $\QT$ is the coefficient of a Haar-uniform covering rate, while $\mathcal{T}_{36}$ is a measure-zero algebraic slice of $\mathrm{SU}(2)$ whose $\omega_9$ cyclotomic content matches $\langle\mathrm{Clifford}, P(2\pi/9)\rangle$. The super-golden extensions saturate $\Popt$ but equidistribute in the wrong direction for this target. A lattice-gauge simulator compiling \cref{eq:T36} should therefore rank extensions by target-family mean depth, not by $\QT$, and the two rankings can disagree by nearly an order of magnitude.
