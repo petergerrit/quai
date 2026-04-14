@@ -192,6 +192,18 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="Optional tag written into each cached row.")
     qp.add_argument("--db", type=Path, default=None,
                     help="SQLite cache path (default: swiftbot/kb/cache.db).")
+    qp.add_argument("--ignore-memory-budget", action="store_true",
+                    help=("Skip the pre-flight peak-RSS check. Use when you "
+                          "accept the OOM risk (e.g. on a machine you can "
+                          "reset)."))
+    qp.add_argument("--rss-cap-gb", type=float, default=None,
+                    help=("Per-subprocess RLIMIT_AS cap in GB. Default: "
+                          "1.5× the per-proc estimate from mem_safety. "
+                          "Set to 0 to disable the cap."))
+    qp.add_argument("--mem-backpressure-gb", type=float, default=None,
+                    help=("Pause new dispatches when MemAvailable drops "
+                          "below this many GB. Default from "
+                          "$SWIFTBOT_MEM_BACKPRESSURE_GB (6.0)."))
 
     # q-panel-summary — post-process a q-panel run, print ranked table with
     # best/mean±std aggregated from per-sample qt_results rows.
@@ -400,6 +412,7 @@ def _run_q_panel(args) -> int:
     import time
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from swiftbot.stages import s3_efficiency as s3
+    from swiftbot.stages import mem_safety
 
     panel_def = PANELS[args.panel]
     ext_list = panel_def["extensions"]()
@@ -424,6 +437,38 @@ def _run_q_panel(args) -> int:
           f"extensions={len(ext_list)} total={len(jobs)} t={args.t}",
           file=sys.stderr)
 
+    # --- Memory safety (A): pre-flight budget check ---
+    d = panel_def["dim"]
+    group_sizes = [gmod.REGISTRY[g].expected_size for g in groups]
+    ext_kinds = [spec.kind for _, spec in ext_list]
+    try:
+        budget = mem_safety.check_budget_or_raise(
+            group_sizes=group_sizes,
+            extension_kinds=ext_kinds,
+            d=d, t=args.t,
+            workers=max(1, args.workers),
+            shard_workers=max(1, args.shard_workers),
+            rnd_samples=args.rnd_samples,
+            override=args.ignore_memory_budget,
+        )
+        print(f"q-panel: memory budget OK — {budget.reason}",
+              file=sys.stderr, flush=True)
+    except mem_safety.MemoryBudgetExceeded as e:
+        print(f"q-panel: MEMORY BUDGET EXCEEDED\n  {e}", file=sys.stderr)
+        return 3
+
+    # --- Memory safety (B): per-subprocess RLIMIT_AS cap ---
+    if args.rss_cap_gb is None:
+        # Default: 1.5× the per-proc estimate for the largest group.
+        rss_cap_gb = mem_safety.per_subprocess_cap_gb(
+            d=d, t=args.t, group_size=max(group_sizes),
+        )
+    else:
+        rss_cap_gb = args.rss_cap_gb if args.rss_cap_gb > 0 else None
+    if rss_cap_gb:
+        print(f"q-panel: per-subprocess RLIMIT_AS cap = {rss_cap_gb:.1f} GB",
+              file=sys.stderr, flush=True)
+
     cache_kwargs: dict = {"run_id": args.run_id}
     if args.db is not None:
         cache_kwargs["path"] = args.db
@@ -436,6 +481,21 @@ def _run_q_panel(args) -> int:
 
         def _run_one(idx_job):
             idx, (grp, name, spec) = idx_job
+            # --- Memory safety (C): runtime backpressure ---
+            # Wait before dispatching a new subprocess if free RAM is low.
+            # Each worker thread hits this independently, so N workers
+            # waiting for memory all proceed as soon as the condition
+            # clears (no central coordinator needed).
+            try:
+                mem_safety.wait_for_available_memory(
+                    min_free_gb=args.mem_backpressure_gb,
+                )
+            except TimeoutError as e:
+                print(f"  [{idx+1}/{len(jobs)}] {grp:>6s} {name:<20s} "
+                      f"BACKPRESSURE_TIMEOUT: {e}",
+                      file=sys.stderr, flush=True)
+                return idx, (grp, name, spec.kind, [], 0.0)
+
             ss = args.rnd_samples if spec.kind == "rnd" else 1
             t0 = time.time()
             recs = s3.evaluate_extension(
@@ -444,6 +504,7 @@ def _run_q_panel(args) -> int:
                 timeout_s=args.timeout, verbose=False,
                 in_process=args.in_process,
                 shard_workers=args.shard_workers,
+                rss_cap_gb=rss_cap_gb,
             )
             dt = time.time() - t0
             return idx, (grp, name, spec.kind, recs, dt)

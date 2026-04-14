@@ -281,6 +281,7 @@ def run_qco(
     verbose: bool = False,
     pi_cache_dir: Path | str | None = None,
     in_process: bool = False,
+    rss_cap_gb: float | None = None,
 ) -> QCORunResult:
     """Run qco-main_opt as a subprocess (default) or in-process and return
     the output path.
@@ -296,6 +297,10 @@ def run_qco(
               faster per call but shares state with the swiftbot process
               (a qco OOM becomes a swiftbot OOM). Good for small runs,
               bad for paper-scale.
+    rss_cap_gb: if not None, cap the subprocess's virtual memory (RLIMIT_AS)
+              at this many gigabytes. A runaway qco subprocess raises
+              MemoryError instead of eating the host. Ignored in in-process
+              mode since the limit would apply to swiftbot itself.
     """
     if work_dir is None:
         work_dir = Path(tempfile.mkdtemp(prefix="swiftbot_qco_"))
@@ -316,9 +321,16 @@ def run_qco(
         env["QCO_PI_CACHE_DIR"] = pi_cache_str
     else:
         env.pop("QCO_PI_CACHE_DIR", None)
+
+    preexec_fn = None
+    if rss_cap_gb is not None and rss_cap_gb > 0:
+        from swiftbot.stages.mem_safety import rlimit_preexec
+        preexec_fn = rlimit_preexec(rss_cap_gb)
+
     proc = subprocess.run(
         argv, cwd=work_dir,
         capture_output=True, text=True, timeout=timeout_s, env=env,
+        preexec_fn=preexec_fn,
     )
     if proc.returncode != 0:
         raise RuntimeError(
@@ -418,6 +430,7 @@ def evaluate_extension(
     verbose: bool = False,
     in_process: bool = False,
     shard_workers: int = 1,
+    rss_cap_gb: float | None = None,
 ) -> list[QTRecord]:
     """Evaluate one (base_group, extension_spec) pair end-to-end.
 
@@ -469,6 +482,7 @@ def evaluate_extension(
             work_dir=work_dir, python=python, timeout_s=timeout_s,
             verbose=verbose, in_process=in_process,
             shard_workers=shard_workers,
+            rss_cap_gb=rss_cap_gb,
         )
 
     # --- single-process path ---
@@ -482,6 +496,7 @@ def evaluate_extension(
         run_spec, work_dir=work_dir, python=python,
         timeout_s=timeout_s, verbose=verbose,
         in_process=in_process,
+        rss_cap_gb=rss_cap_gb,
     )
 
     _, rows = qcomod.read_norm_rows(result.output_path)
@@ -524,6 +539,7 @@ def _evaluate_sharded(
     verbose: bool,
     in_process: bool,
     shard_workers: int,
+    rss_cap_gb: float | None = None,
 ) -> list[QTRecord]:
     """Run sample_size as shard_workers parallel qco subprocesses.
 
@@ -556,6 +572,7 @@ def _evaluate_sharded(
             run_spec, work_dir=shard_work, python=python,
             timeout_s=timeout_s, verbose=verbose,
             in_process=in_process,
+            rss_cap_gb=rss_cap_gb,
         )
         _, rows = qcomod.read_norm_rows(result.output_path)
         return shard_idx, rows, result.output_path
