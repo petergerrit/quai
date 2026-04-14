@@ -253,7 +253,7 @@ Three features stand out in \cref{tab:d3_tier1,fig:qt_vs_groupsize}. First, five
 
 To separate the base-group effect from random-extension variance, we generated a single batch of ten Haar-random single-qutrit extensions (\texttt{seed=42}) and evaluated the panel identically on all three groups. \cref{tab:d3_apples} lists the best-sample $\delta$ per matrix.
 
-\begin{table*}[t]
+\begin{table}[t]
 \centering
 \caption{\label{tab:d3_apples}Apples-to-apples Haar panel at $t=5$: ten pre-generated single-qutrit extensions (\texttt{seed=42}) evaluated identically against each of the three base groups. The smallest $\delta$ in each row is bolded. Mean $\delta$ over the ten matrices appears in the last row; lower is better.}
 \begin{tabular}{cccc}
@@ -276,7 +276,7 @@ matrix  & $\Sigmathree{72}$ & $\Sigmathree{216}$ & $\Sigmathree{360}$ \\
 mean & $0.3073$ & $\mathbf{0.2506}$ & $0.2550$ \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 Seven of the ten matrices have $\delta$ on $\Sigmathree{360}$ strictly smaller than $\delta$ on $\Sigmathree{72}$, confirming that a typical Haar extension is improved by the larger base group. The per-matrix ordering against $\Sigmathree{216}$ is noisier: four of ten matrices have $\delta$ on $\Sigmathree{360}$ smaller than on $\Sigmathree{216}$, and the ten-matrix apples-panel mean $\delta$ is marginally \emph{worse} on $\Sigmathree{360}$ ($0.2550$) than on $\Sigmathree{216}$ ($0.2506$). The culprit is a single outlier: \texttt{apple05} gives $\delta = 0.4377$ on $\Sigmathree{360}$ against $0.2446$ on $\Sigmathree{72}$ and $0.2412$ on $\Sigmathree{216}$, inflating the $\Sigmathree{360}$ mean by roughly one standard deviation of the rest of the panel.
 
