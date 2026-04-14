@@ -97,6 +97,12 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--db", type=Path, required=True,
                     help="SQLite cache from q-panel --panel d3_rnd_diag.")
+    ap.add_argument("--survey-db", type=Path, default=None,
+                    help=("Optional SQLite cache containing the d3_survey "
+                          "structured extensions (e.g. d3_tier2_v2/cache.db). "
+                          "If supplied, the structured-extension stars are "
+                          "colored by their δ values from this db; otherwise "
+                          "the same db as --db is searched."))
     ap.add_argument("--out", type=Path,
                     default=Path(__file__).resolve().parent / "fig_d3_rnd_diag_ternary.pdf",
                     help="Output PDF path.")
@@ -131,6 +137,19 @@ def main() -> None:
     # Collect (point, δ) data per group + global δ range. Only the groups
     # we actually plot are populated here (S216 stands in for the
     # S216=S648 degeneracy).
+    #
+    # S_3 symmetrization: the Σ-series base groups contain permutation
+    # matrices (subgroup of the qutrit Clifford), so
+    # diag(e^{iθ_{π(1)}}, e^{iθ_{π(2)}}, e^{iθ_{π(3)}}) is conjugate under
+    # 𝒞 to diag(e^{iθ_1}, e^{iθ_2}, e^{iθ_3}) for every π ∈ S_3. The
+    # spectral radius δ is therefore constant on each S_3 orbit, so
+    # plotting all 6 permutations per sample is physically correct and
+    # densifies the ternary plot by 6×.
+    import itertools
+
+    def _s3_orbit(bary: tuple[float, float, float]) -> list[tuple[float, float, float]]:
+        return [tuple(bary[i] for i in perm) for perm in itertools.permutations(range(3))]
+
     data: dict[str, list[tuple[tuple[float, float, float], float]]] = {
         g: [] for g in _PANEL_GROUPS
     }
@@ -145,8 +164,9 @@ def main() -> None:
             d = load_best_delta(args.db, fp, _GROUP_SIZE[g])
             if d is None:
                 continue
-            data[g].append((bary, d))
-            all_delta.append(d)
+            for orbit_point in _s3_orbit(bary):
+                data[g].append((orbit_point, d))
+                all_delta.append(d)
     if not all_delta:
         raise SystemExit(
             f"No d3_rnd_diag rows in {args.db}. "
@@ -154,18 +174,37 @@ def main() -> None:
         )
     vmin, vmax = min(all_delta), max(all_delta)
 
-    # Structured overlays.
-    overlay_bary: dict[str, tuple[float, float, float]] = {}
+    # Structured overlays (P(2π/9), P(π/9), P(2π/5)): one marker per
+    # extension per group, colored by that extension's measured δ. The
+    # S_3 symmetrization above applies to the random-diag scatter; the
+    # structured stars keep a single representative position so the
+    # viewer can read them individually.
+    # Structured overlays at their true barycentric positions (no lift).
+    # Since P(θ) = diag(1, e^{iθ}, e^{-iθ}) has θ_1 = 0, these lie on
+    # one edge of the triangle; we render the stars with a high zorder
+    # so they sit visually ABOVE the boundary line rather than under it.
+    overlay_points: dict[str, tuple[tuple[float, float, float], dict[str, float]]] = {}
+    survey_db = args.survey_db if args.survey_db is not None else args.db
     for name, triple in survey_angles.items():
         b = to_barycentric(*triple)
-        if b is not None:
-            overlay_bary[name] = b
+        if b is None:
+            continue
+        spec = next((s for n, s in survey_panel if n == name), None)
+        if spec is None:
+            continue
+        fp = extension_fingerprint(spec)
+        per_group_delta: dict[str, float] = {}
+        for g in _PANEL_GROUPS:
+            d = load_best_delta(survey_db, fp, _GROUP_SIZE[g])
+            if d is not None:
+                per_group_delta[g] = d
+        overlay_points[name] = (b, per_group_delta)
 
     # Two panels + colorbar. Square subplot axes so the ternary triangle
     # renders equilateral (otherwise the default aspect ratio from the
     # figsize skews it).
     fig = plt.figure(figsize=(9.0, 4.5))
-    gs = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.0, 0.04], wspace=0.18)
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.0, 0.04], wspace=0.28)
 
     cmap = matplotlib.colormaps["viridis"]
     norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
@@ -176,15 +215,22 @@ def main() -> None:
         _, tax = ternary.figure(ax=ax, scale=SCALE)
         tax.boundary(linewidth=1.2)
         tax.gridlines(color="0.6", multiple=0.5, linewidth=0.5)
-        tax.set_title(_SIGMA_LABELS[g], pad=26)
+        # Σ-group label placed BELOW the triangle (not above).
+        ax.text(0.5, -0.04, _SIGMA_LABELS[g],
+                transform=ax.transAxes, ha="center", va="top",
+                fontsize=11)
 
-        # Edge ticks every π/2, labeled in π units: 0, 0.5π, 1.0π, 1.5π, 2π.
-        tax.ticks(axis="lbr", linewidth=0.8, multiple=0.5,
-                  tick_formats=r"$%.1f\pi$", offset=0.025, fontsize=8)
-        # Corner labels: a point near the θᵢ corner means θᵢ dominates.
+        # Edge ticks at multiples of π/2 with rational-fraction labels.
+        tick_locs = [0.0, 0.5, 1.0, 1.5, 2.0]
+        tick_labels = [r"$0$", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"]
+        tax.ticks(ticks=tick_labels, locations=tick_locs,
+                  axis="lbr", linewidth=0.8, offset=0.025, fontsize=8)
+        # Corner labels using python-ternary's helpers. There's a slight
+        # rotation-induced asymmetry between the left/right labels'
+        # vertical position; that's a library quirk we tolerate.
         tax.top_corner_label(r"$\theta_1$", fontsize=11, offset=0.22)
-        tax.right_corner_label(r"$\theta_2$", fontsize=11, offset=0.08)
-        tax.left_corner_label(r"$\theta_3$", fontsize=11, offset=0.08)
+        tax.right_corner_label(r"$\theta_2$", fontsize=11, offset=0.28)
+        tax.left_corner_label(r"$\theta_3$", fontsize=11, offset=0.16)
 
         # Data points colored by δ.
         rows = data[g]
@@ -194,21 +240,38 @@ def main() -> None:
             tax.scatter(pts, marker="o", s=28, c=colors,
                         linewidths=0, edgecolors="none")
 
-        # Structured overlays as red stars.
-        if overlay_bary:
-            tax.scatter(list(overlay_bary.values()), marker="*", s=140,
-                        c=[matplotlib.colors.to_rgba("red", 1.0)] * len(overlay_bary),
-                        linewidths=0.6, edgecolors="black")
+        # Structured-extension stars, colored by measured δ on this group.
+        star_points = []
+        star_colors = []
+        for _name, (bary_pt, per_group_delta) in overlay_points.items():
+            d = per_group_delta.get(g)
+            if d is None:
+                continue
+            star_points.append(bary_pt)
+            star_colors.append(cmap(norm(d)))
+        if star_points:
+            tax.scatter(star_points, marker="*", s=200,
+                        c=star_colors, linewidths=0.8, edgecolors="black",
+                        zorder=10)
 
         tax.clear_matplotlib_ticks()
         ax.axis("off")
 
-    # Shared colorbar panel.
+    # Shared colorbar panel, shrunk vertically to roughly match the
+    # triangle's visible height (the ternary plot only uses the bottom
+    # ~87% of its subplot; a full-height colorbar overshoots).
     cax = fig.add_subplot(gs[0, 2])
     sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = fig.colorbar(sm, cax=cax)
     cbar.set_label(r"$\delta$ (best sample, $t=5$)")
+
+    # Shrink cax to triangle height, centered vertically.
+    pos = cax.get_position()
+    shrink = 0.72
+    new_h = pos.height * shrink
+    new_y = pos.y0 + (pos.height - new_h) / 2
+    cax.set_position([pos.x0, new_y, pos.width, new_h])
 
     fig.savefig(args.out, bbox_inches="tight")
     print(f"wrote {args.out}")
