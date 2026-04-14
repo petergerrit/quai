@@ -45,6 +45,17 @@ def _rebuild_apple_fps() -> dict[int, str]:
 
 
 def main(db_path: str = "sweep_runs/apples100_t5.db"):
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "axes.labelsize": 11,
+        "axes.titlesize": 11,
+        "legend.fontsize": 8,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+        "text.latex.preamble": r"\usepackage{amsmath}",
+    })
     fps = _rebuild_apple_fps()
     fp_to_id = {v: k for k, v in fps.items()}
 

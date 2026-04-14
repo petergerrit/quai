@@ -180,10 +180,10 @@ We validate the \SWIFTbot QCO kernel against the $d=2$ reference dataset of S{\l
 \toprule
 Base ($|\mathcal{C}|$) & Extension & $\QT$ (this work) & $\QT$~\cite{Slowik:2025qco} & $\Popt$ \\
 \midrule
-Clifford ($24$)        & $P(\pi/4)$, canonical $T$  & $51.91$ & $\approx 52$                  & $3.47$ \\
-Clifford ($24$)        & Haar-rnd (best of $20$)    & $3.79$  & $\approx 3.7$                 & $3.47$ \\
-\texttt{hurwitz} ($12$) & Haar-rnd (best of $20$)    & $4.34$  & $\approx 4.0$ (super-golden)  & $4.19$ \\
-\texttt{BI} ($120$)    & Haar-rnd (best of $10^4$)   & $3.57$  & ---                            & $2.81$ \\
+Clifford ($24$)         & $P(\pi/4)$              & $51.91$ & $\approx 52$             & $3.47$ \\
+Clifford ($24$)         & rnd (best of $20$)      & $3.79$  & $\approx 3.7$            & $3.47$ \\
+\texttt{hurwitz} ($12$) & rnd (best of $20$)      & $4.34$  & $\approx 4.0$            & $4.19$ \\
+\texttt{BI} ($120$)     & rnd (best of $10^4$)    & $3.57$  & ---                      & $2.81$ \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -206,37 +206,37 @@ The QCO numerics run at $t=5$, the largest design order for which the full panel
 
 \begin{table*}[t]
 \centering
-\caption{\label{tab:d3_tier1}$d=3$ survey at $t=10$. Each (group, extension) pair contributes one $\delta$ sample (fixed extensions are deterministic; rnd batches are single-shot Haar draws at this design order). The Kesten--McKay floor $\Popt$ is $2.692$, $2.544$, $2.495$ for $\Sigmathree{72,216,360}$ respectively. Rows are ranked within each base group by $\delta$. The $t=5$ values match to four decimals for all structured extensions except $\HV{2}{1}{0}$ on $\Sigmathree{72}$ and $\Sigmathree{216}$, where the $t=5$ floor at $\delta=0.5000$ lifts slightly at $t=10$; the cross-group $\delta$-degeneracy observed at $t=5$ is therefore a genuine structural feature, not a finite-$t$ artifact.}
+\caption{\label{tab:d3_tier1}$d=3$ survey at $t=10$. Each fixed extension is deterministic ($\delta$ from a single evaluation); the rnd row per group reports the best of two independent Haar draws, each itself a single-sample evaluation at this design order. Kesten--McKay floor $\Popt$: $2.692$, $2.544$, $2.495$ for $\Sigmathree{72,216,360}$. Rows are ranked within each group by $\delta$; all structured extensions match their $t=5$ values to four decimals except $\HV{2}{1}{0}$ on the two smaller groups, where the $t=5$ floor at $\delta=0.5000$ lifts at $t=10$.}
 \begin{tabular}{llcccc}
 \toprule
 Group & Extension & kind & $\delta$ & $\QT$ & $\QT/\log|\mathcal{C}|$ \\
 \midrule
-$\Sigmathree{72}$  & rnd (batch 2)  & rnd          & $0.2605$ & $3.996$   & $0.744$ \\
-$\Sigmathree{72}$  & rnd (batch 1)  & rnd          & $0.3303$ & $4.852$   & $0.903$ \\
-$\Sigmathree{72}$  & $\HV{2}{1}{0}$ & howard\_vala & $0.5927$ & $10.277$  & $1.911$ \\
-$\Sigmathree{72}$  & $P(2\pi/5)$    & angle        & $0.6545$ & $12.681$  & $2.360$ \\
-$\Sigmathree{72}$  & $\HV{1}{1}{0}$ & howard\_vala & $0.6764$ & $13.750$  & $2.559$ \\
-$\Sigmathree{72}$  & $\HV{1}{2}{0}$ & howard\_vala & $0.6764$ & $13.750$  & $2.559$ \\
-$\Sigmathree{72}$  & $P(2\pi/9)$    & angle        & $0.8830$ & $43.208$  & $8.041$ \\
-$\Sigmathree{72}$  & $P(\pi/9)$     & angle        & $0.9698$ & $175.561$ & $32.671$ \\
-\midrule
-$\Sigmathree{216}$ & rnd (batch 2)  & rnd          & $0.2107$ & $4.157$   & $0.643$ \\
-$\Sigmathree{216}$ & rnd (batch 1)  & rnd          & $0.2786$ & $5.066$   & $0.783$ \\
-$\Sigmathree{216}$ & $\HV{2}{1}{0}$ & howard\_vala & $0.5833$ & $12.011$  & $1.856$ \\
-$\Sigmathree{216}$ & $P(2\pi/5)$    & angle        & $0.6545$ & $15.273$  & $2.360$ \\
-$\Sigmathree{216}$ & $\HV{1}{1}{0}$ & howard\_vala & $0.6764$ & $16.561$  & $2.559$ \\
-$\Sigmathree{216}$ & $\HV{1}{2}{0}$ & howard\_vala & $0.6764$ & $16.561$  & $2.559$ \\
-$\Sigmathree{216}$ & $P(2\pi/9)$    & angle        & $0.8830$ & $52.039$  & $8.041$ \\
-$\Sigmathree{216}$ & $P(\pi/9)$     & angle        & $0.9698$ & $211.443$ & $32.671$ \\
-\midrule
-$\Sigmathree{360}$ & rnd (batch 2)  & rnd          & $0.1784$ & $4.052$   & $0.579$ \\
-$\Sigmathree{360}$ & rnd (batch 1)  & rnd          & $0.2047$ & $4.404$   & $0.629$ \\
-$\Sigmathree{360}$ & $\HV{2}{1}{0}$ & howard\_vala & $0.5698$ & $12.419$  & $1.775$ \\
-$\Sigmathree{360}$ & $P(2\pi/5)$    & angle        & $0.6545$ & $16.478$  & $2.360$ \\
-$\Sigmathree{360}$ & $\HV{1}{1}{0}$ & howard\_vala & $0.6764$ & $17.867$  & $2.559$ \\
-$\Sigmathree{360}$ & $\HV{1}{2}{0}$ & howard\_vala & $0.6764$ & $17.867$  & $2.559$ \\
-$\Sigmathree{360}$ & $P(2\pi/9)$    & angle        & $0.8830$ & $56.145$  & $8.041$ \\
-$\Sigmathree{360}$ & $P(\pi/9)$     & angle        & $0.9698$ & $228.127$ & $32.671$ \\
+\multirow{7}{*}{$\Sigmathree{72}$}
+   & rnd (best of $2$) & rnd          & $0.2605$ & $3.996$   & $0.744$ \\
+   & $\HV{2}{1}{0}$    & howard\_vala & $0.5927$ & $10.277$  & $1.911$ \\
+   & $P(2\pi/5)$       & angle        & $0.6545$ & $12.681$  & $2.360$ \\
+   & $\HV{1}{1}{0}$    & howard\_vala & $0.6764$ & $13.750$  & $2.559$ \\
+   & $\HV{1}{2}{0}$    & howard\_vala & $0.6764$ & $13.750$  & $2.559$ \\
+   & $P(2\pi/9)$       & angle        & $0.8830$ & $43.208$  & $8.041$ \\
+   & $P(\pi/9)$        & angle        & $0.9698$ & $175.561$ & $32.671$ \\
+\cmidrule(lr){2-6}
+\multirow{7}{*}{$\Sigmathree{216}$}
+   & rnd (best of $2$) & rnd          & $0.2107$ & $4.157$   & $0.643$ \\
+   & $\HV{2}{1}{0}$    & howard\_vala & $0.5833$ & $12.011$  & $1.856$ \\
+   & $P(2\pi/5)$       & angle        & $0.6545$ & $15.273$  & $2.360$ \\
+   & $\HV{1}{1}{0}$    & howard\_vala & $0.6764$ & $16.561$  & $2.559$ \\
+   & $\HV{1}{2}{0}$    & howard\_vala & $0.6764$ & $16.561$  & $2.559$ \\
+   & $P(2\pi/9)$       & angle        & $0.8830$ & $52.039$  & $8.041$ \\
+   & $P(\pi/9)$        & angle        & $0.9698$ & $211.443$ & $32.671$ \\
+\cmidrule(lr){2-6}
+\multirow{7}{*}{$\Sigmathree{360}$}
+   & rnd (best of $2$) & rnd          & $0.1784$ & $4.052$   & $0.579$ \\
+   & $\HV{2}{1}{0}$    & howard\_vala & $0.5698$ & $12.419$  & $1.775$ \\
+   & $P(2\pi/5)$       & angle        & $0.6545$ & $16.478$  & $2.360$ \\
+   & $\HV{1}{1}{0}$    & howard\_vala & $0.6764$ & $17.867$  & $2.559$ \\
+   & $\HV{1}{2}{0}$    & howard\_vala & $0.6764$ & $17.867$  & $2.559$ \\
+   & $P(2\pi/9)$       & angle        & $0.8830$ & $56.145$  & $8.041$ \\
+   & $P(\pi/9)$        & angle        & $0.9698$ & $228.127$ & $32.671$ \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -247,7 +247,10 @@ $\Sigmathree{360}$ & $P(\pi/9)$     & angle        & $0.9698$ & $228.127$ & $32.
 \caption{\label{fig:qt_vs_groupsize}$\QT$ across the three $\Sigma$-series base groups at $d=3$, $t=10$, for every extension in the panel of \cref{tab:d3_tier1}. The dashed line is the Kesten--McKay floor $\Popt$ of \cref{eq:Popt}; rational-angle diagonal and Howard--Vala extensions run nearly parallel to it at a factor $\sim\!3$--$\!70$ offset (Finding~2), while Haar-random extensions (stars) approach $\Popt$ as $|\mathcal{C}|$ grows (Finding~3).}
 \end{figure*}
 
-Three features stand out in \cref{tab:d3_tier1,fig:qt_vs_groupsize}. First, five of six structured extensions give \emph{identical} $\delta$ to four decimals across all three groups, bit-for-bit the same as at $t=5$. $\HV{2}{1}{0}$ is the exception: at $t=5$ it floored at $\delta=0.5000$ on $\Sigmathree{72}$ and $\Sigmathree{216}$, while at $t=10$ it lifts to $0.5927$ and $0.5833$ respectively, with $\Sigmathree{360}$ unchanged at $0.5698$. The shared dominant spectral direction lives in a diagonal subalgebra common to the $\Sigma$-series, and $|\mathcal{C}|$ alone does not sharpen it; the structural pattern survives the jump from $t=5$ to $t=10$. Second, because $\delta$ is essentially constant while $\log|\mathcal{C}|$ grows, the structured extensions' $\QT$ grows with $|\mathcal{C}|$: not because smaller groups are better, but because a larger group needs proportionally more depth to densely cover $\mathrm{SU}(3)$. The invariant quantity $\QT/\log|\mathcal{C}|$ (rightmost column) is exactly constant across groups for the five degenerate extensions. Third, Haar-random extensions \emph{do} benefit from larger $|\mathcal{C}|$: the mean of the two rnd batches per group drops from $0.295$ on $\Sigmathree{72}$ to $0.245$ on $\Sigmathree{216}$ to $0.192$ on $\Sigmathree{360}$. A Haar draw populates every Lie-algebra direction and couples to the full subdominant spectrum. The rnd batches here are single Haar samples per group at $t=10$; for statistically significant $\delta$ distributions see the apples-to-apples panel below.
+\cref{fig:qt_vs_groupsize} shows three features, elaborated against \cref{tab:d3_tier1}.
+\emph{(i) Structured-extension degeneracy.} Five of six structured extensions give $\delta$ identical to four decimals across all three base groups, bit-for-bit the same as at $t=5$. $\HV{2}{1}{0}$ is the only exception: it lifts from the $t=5$ floor $\delta = 0.5000$ on the smaller groups to $\delta \approx 0.58$ at $t=10$, while $\Sigmathree{360}$ stays at $0.5698$. The degeneracy is structural, not a finite-$t$ artifact.
+\emph{(ii) Linear $\QT$ growth with $\log|\mathcal{C}|$.} Because $\delta$ is essentially constant, $\QT$ grows linearly with $\log|\mathcal{C}|$ for the degenerate extensions: a larger base group needs proportionally more depth to densely cover $\mathrm{SU}(3)$, so the normalized $\QT/\log|\mathcal{C}|$ (rightmost column) collapses the three groups onto the same value.
+\emph{(iii) Haar-random gains with $|\mathcal{C}|$.} Best-sample Haar $\delta$ drops from $0.26$ to $0.18$ from $\Sigmathree{72}$ to $\Sigmathree{360}$; a random draw couples to every Lie-algebra direction including the subdominant channels that grow with $|\mathcal{C}|$. Statistically significant Haar distributions are deferred to \cref{sec:d3_apples,sec:d3_ternary}.
 
 \subsection{Apples-to-apples Haar panel}\label{sec:d3_apples}
 
@@ -414,7 +417,7 @@ $\Sigma+P(2\pi/5)$ ($d=3$)          & \texttt{Z[$\omega_{10}$]}           & \tex
 
 \subsection{Limitations}\label{sec:discussion_limits}
 
-Three limitations frame the numerical claims. First, the $d=3$ Haar statistics come from either single-sample $t=10$ draws (Tier-1 panel) or the $100$-matrix apples-to-apples panel at $t=5$ (\cref{sec:d3_apples}); a joint $t=10$, $\sim\!100$-sample Haar run awaits a dedicated cluster slot because the qco kernel aggregates per-subprocess, making per-sample accumulation expensive. Second, no $d=4$ survey is attempted: the $t$-design irrep dimensions scale as $t^6$ at $d=4$, requiring a dedicated cluster run outside this paper's scope. Third, the target-family $T$-counts in \cref{tab:lamm_sigma36} are BFS estimates except for the canonical Clifford$+P(\pi/4)$ row; the $6.8\times$ advantage survives any plausible tightening on the canonical side, but absolute $T$-counts carry the \texttt{bfs\_estimate} caveat.
+Three limitations frame the numerical claims. First, the $d=3$ Haar statistics come from either single-sample $t=10$ draws (Tier-1 panel) or the $100$-matrix apples-to-apples panel at $t=5$ (\cref{sec:d3_apples}); a joint $t=10$, $\sim\!100$-sample Haar run is held up by a qco-kernel limitation that aggregates each subprocess to a single output row regardless of sample size. Second, no $d=4$ survey is attempted: largest-irrep dimensions scale as $t^6$ at $d=4$ and squared matrix-storage as $t^{12}$, so only the smallest SU(4) subgroups ($|\mathcal{C}|\lesssim 300$) fit in a single-node 125\,GB budget at $t=10$. A pilot on those is tractable overnight; the large-$|\mathcal{C}|$ SU(4) subgroups (e.g.\ $\mathrm{S7F}$) would need a cluster slot. Third, the target-family $T$-counts in \cref{tab:lamm_sigma36} are BFS estimates except for the Clifford$+P(\pi/4)$ row; the $6.8\times$ advantage survives any plausible tightening on the canonical side, but absolute $T$-counts carry the \texttt{bfs\_estimate} caveat.
 
 \subsection{Open questions}\label{sec:discussion_open}
 
