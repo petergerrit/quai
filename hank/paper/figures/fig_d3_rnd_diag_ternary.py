@@ -174,12 +174,15 @@ def main() -> None:
         tax.gridlines(color="0.6", multiple=SCALE / 5.0, linewidth=0.5)
         tax.set_title(_SIGMA_LABELS[g], pad=22)
 
-        # Edge ticks in share-of-sum units 0, 0.2, ..., 1.0.
+        # Edge ticks are barycentric fractions 0, 0.2, ..., 1.0 — i.e.,
+        # each θᵢ's share of Σ θⱼ (after reducing each to [0, 2π)).
         tax.ticks(axis="lbr", linewidth=0.8, multiple=SCALE / 5.0,
                   tick_formats="%.1f", offset=0.02, fontsize=7)
-        tax.left_axis_label(r"$\theta_3$", fontsize=10, offset=0.14)
-        tax.right_axis_label(r"$\theta_2$", fontsize=10, offset=0.14)
-        tax.bottom_axis_label(r"$\theta_1$", fontsize=10, offset=0.08)
+        # Corner labels: a point near the θᵢ corner means θᵢ dominates the
+        # triple. The ticks are still fractional shares, not radians.
+        tax.top_corner_label(r"$\theta_1$", fontsize=11, offset=0.16)
+        tax.right_corner_label(r"$\theta_2$", fontsize=11, offset=0.04)
+        tax.left_corner_label(r"$\theta_3$", fontsize=11, offset=0.04)
 
         # Data points colored by δ.
         rows = data[g]
