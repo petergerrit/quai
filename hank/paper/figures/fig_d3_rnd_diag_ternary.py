@@ -177,9 +177,9 @@ def main() -> None:
         # Edge ticks in share-of-sum units 0, 0.2, ..., 1.0.
         tax.ticks(axis="lbr", linewidth=0.8, multiple=SCALE / 5.0,
                   tick_formats="%.1f", offset=0.02, fontsize=7)
-        tax.left_axis_label(r"$\theta_3$ share", fontsize=9, offset=0.14)
-        tax.right_axis_label(r"$\theta_2$ share", fontsize=9, offset=0.14)
-        tax.bottom_axis_label(r"$\theta_1$ share", fontsize=9, offset=0.08)
+        tax.left_axis_label(r"$\theta_3$", fontsize=10, offset=0.14)
+        tax.right_axis_label(r"$\theta_2$", fontsize=10, offset=0.14)
+        tax.bottom_axis_label(r"$\theta_1$", fontsize=10, offset=0.08)
 
         # Data points colored by δ.
         rows = data[g]
