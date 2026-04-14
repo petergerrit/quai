@@ -255,23 +255,25 @@ To separate the base-group effect from random-extension variance, we generated a
 
 \begin{table*}[t]
 \centering
-\caption{\label{tab:d3_apples}Apples-to-apples Haar panel at $t=5$: ten pre-generated single-qutrit extensions (\texttt{seed=42}) evaluated identically against each of the three base groups. The final column gives the best (smallest) $\delta$ across the three groups for each matrix. Mean $\delta$ over the ten matrices appears in the last row; lower is better.}
-\begin{tabular}{ccccc}
+\caption{\label{tab:d3_apples}Apples-to-apples Haar panel at $t=5$: ten pre-generated single-qutrit extensions (\texttt{seed=42}) evaluated identically against each of the three base groups. The smallest $\delta$ in each row is bolded. Mean $\delta$ over the ten matrices appears in the last row; lower is better.}
+\begin{tabular}{cccc}
 \toprule
-matrix & $\delta$ on $\Sigmathree{72}$ & $\delta$ on $\Sigmathree{216}$ & $\delta$ on $\Sigmathree{360}$ & best \\
+        & \multicolumn{3}{c}{$\delta$} \\
+\cmidrule(lr){2-4}
+matrix  & $\Sigmathree{72}$ & $\Sigmathree{216}$ & $\Sigmathree{360}$ \\
 \midrule
-\texttt{apple00} & $0.2974$ & $0.2974$ & $0.3462$ & $\Sigmathree{216/648}$ \\
-\texttt{apple01} & $0.4636$ & $0.4636$ & $0.2029$ & $\Sigmathree{360}$ \\
-\texttt{apple02} & $0.2221$ & $0.1727$ & $0.2285$ & $\Sigmathree{216}$ \\
-\texttt{apple03} & $0.2493$ & $0.2292$ & $0.2299$ & $\Sigmathree{216}$ \\
-\texttt{apple04} & $0.3430$ & $0.2104$ & $0.1197$ & $\Sigmathree{360}$ \\
-\texttt{apple05} & $0.2446$ & $0.2412$ & $0.4377$ & $\Sigmathree{216}$ \\
-\texttt{apple06} & $0.2842$ & $0.1701$ & $0.1965$ & $\Sigmathree{216}$ \\
-\texttt{apple07} & $0.3169$ & $0.2312$ & $0.2271$ & $\Sigmathree{360}$ \\
-\texttt{apple08} & $0.3996$ & $0.2377$ & $0.3795$ & $\Sigmathree{216}$ \\
-\texttt{apple09} & $0.2526$ & $0.2526$ & $0.1823$ & $\Sigmathree{360}$ \\
+\texttt{apple00} & $\mathbf{0.2974}$ & $\mathbf{0.2974}$ & $0.3462$ \\
+\texttt{apple01} & $0.4636$ & $0.4636$ & $\mathbf{0.2029}$ \\
+\texttt{apple02} & $0.2221$ & $\mathbf{0.1727}$ & $0.2285$ \\
+\texttt{apple03} & $0.2493$ & $\mathbf{0.2292}$ & $0.2299$ \\
+\texttt{apple04} & $0.3430$ & $0.2104$ & $\mathbf{0.1197}$ \\
+\texttt{apple05} & $0.2446$ & $\mathbf{0.2412}$ & $0.4377$ \\
+\texttt{apple06} & $0.2842$ & $\mathbf{0.1701}$ & $0.1965$ \\
+\texttt{apple07} & $0.3169$ & $0.2312$ & $\mathbf{0.2271}$ \\
+\texttt{apple08} & $0.3996$ & $\mathbf{0.2377}$ & $0.3795$ \\
+\texttt{apple09} & $0.2526$ & $0.2526$ & $\mathbf{0.1823}$ \\
 \midrule
-mean & $0.3073$ & $0.2506$ & $0.2550$ & --- \\
+mean & $0.3073$ & $\mathbf{0.2506}$ & $0.2550$ \\
 \bottomrule
 \end{tabular}
 \end{table*}

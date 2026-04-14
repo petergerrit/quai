@@ -165,7 +165,7 @@ def _build_parser() -> argparse.ArgumentParser:
               "qco-main_opt; print a ranked table of δ and Q_T."),
     )
     qp.add_argument("--panel", default="d3_survey",
-                    choices=("d3_survey", "d3_rnd_apples"),
+                    choices=("d3_survey", "d3_rnd_apples", "d3_rnd_diag"),
                     help="Pre-registered extension panel (default: d3_survey).")
     qp.add_argument("--groups", default=None,
                     help=("Comma-separated base-group names (default: the panel's "
@@ -213,7 +213,7 @@ def _build_parser() -> argparse.ArgumentParser:
               "ranked table; prints one row per (group, panel entry)."),
     )
     qs.add_argument("--panel", default="d3_survey",
-                    choices=("d3_survey", "d3_rnd_apples"),
+                    choices=("d3_survey", "d3_rnd_apples", "d3_rnd_diag"),
                     help="Panel whose fingerprints to match (default: d3_survey).")
     qs.add_argument("--groups", default=None,
                     help="Comma-separated groups to include (default: panel default).")
@@ -316,6 +316,50 @@ def _d3_rnd_apples_panel() -> list[tuple[str, ExtensionSpec]]:
     return out
 
 
+def _d3_rnd_diag_panel(n: int = 50, seed: int = 42) -> list[tuple[str, ExtensionSpec]]:
+    """Random SU(3) diagonal extensions.
+
+    Each extension is ``diag(exp(iθ₁), exp(iθ₂), exp(iθ₃))`` with
+    ``θ₁+θ₂+θ₃ = 0 mod 2π`` (so det = 1). θ₁, θ₂ are drawn uniformly from
+    ``[0, 2π)`` with the fixed seed; θ₃ is pinned to ``-(θ₁+θ₂)``.
+
+    Purpose (§5 Finding 1 follow-up): the structured diagonal panel shows
+    δ degenerate to four decimals across the three Σ-series groups at t=5.
+    Is this because *all* SU(3) diagonals saturate at a common δ floor, or
+    is it specific to the cyclotomic phases in the structured panel? A
+    random-diagonal panel answers this directly by populating the full
+    SU(3) maximal torus with fixed-seed uniform sampling.
+    """
+    import numpy as np
+    rng = np.random.default_rng(seed=seed)
+    out: list[tuple[str, ExtensionSpec]] = []
+    for k in range(n):
+        theta1 = float(rng.uniform(0.0, 2 * np.pi))
+        theta2 = float(rng.uniform(0.0, 2 * np.pi))
+        theta3 = float(-(theta1 + theta2) % (2 * np.pi))
+        M = np.diag([
+            np.exp(1j * theta1),
+            np.exp(1j * theta2),
+            np.exp(1j * theta3),
+        ])
+        out.append((
+            f"rnd_diag{k:03d}",
+            ExtensionSpec(
+                kind="mat",
+                params={
+                    "matrix": M.tolist(),
+                    "theta1": theta1,
+                    "theta2": theta2,
+                    "theta3": theta3,
+                    "diag_id": k,
+                    "seed": seed,
+                },
+                rationale=f"random SU(3) diagonal #{k} (seed {seed})",
+            ),
+        ))
+    return out
+
+
 PANELS: dict[str, dict] = {
     "d3_survey": {
         "extensions": _d3_survey_panel,
@@ -324,6 +368,11 @@ PANELS: dict[str, dict] = {
     },
     "d3_rnd_apples": {
         "extensions": _d3_rnd_apples_panel,
+        "default_groups": ("S216", "S648", "S1080"),
+        "dim": 3,
+    },
+    "d3_rnd_diag": {
+        "extensions": _d3_rnd_diag_panel,
         "default_groups": ("S216", "S648", "S1080"),
         "dim": 3,
     },
