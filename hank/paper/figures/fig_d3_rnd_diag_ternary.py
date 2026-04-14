@@ -46,7 +46,7 @@ _GROUP_SIZE = {"S216": 216, "S648": 648, "S1080": 1080}
 # diagonal at t=5, so we merge them into one panel. S1080 is distinct.
 _PANEL_GROUPS = ["S216", "S1080"]
 _SIGMA_LABELS = {
-    "S216":  r"$\Sigma(72{\times}3) = \Sigma(216{\times}3)$",
+    "S216":  r"$\Sigma(72{\times}3)$ \& $\Sigma(216{\times}3)$",
     "S1080": r"$\Sigma(360{\times}3)$",
 }
 
