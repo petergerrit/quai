@@ -134,19 +134,50 @@ _CODES: list[CodeRecord] = [
         ),
         research_needed=False,
     ),
-    # --- Broader nonadditive/twisted-t-group framework (Kubischta-Teixeira 2024) ---
+    # --- Twisted unitary t-group codes (Kubischta-Teixeira 2024) —
+    #     EXPLICIT qutrit codes with transversal Σ(360×3) action ---
     CodeRecord(
-        name="Twisted unitary t-group codes (framework)",
+        name="Kubischta-Teixeira [[7,1,2]]_3 with transversal Σ(360×3)",
+        n=7, k=1, distance=2, qudit_dim=3,
+        transversal_groups=["S1080"],  # Σ(360×3) in our registry
+        stabilizer=False,
+        reference="Kubischta & Teixeira, PRL 133, 030602 (2024) [arXiv:2402.01638]",
+        notes=(
+            "Smallest instance of the χ_3 family: 7 physical qutrits encode "
+            "1 logical qutrit at distance 2, detecting any single error, with "
+            "the full 1080-element exceptional subgroup Σ(360×3) acting "
+            "transversally. First published explicit qutrit code hosting a "
+            "Σ-series subgroup transversally. Family extends to n ≡ 1 (mod 3), "
+            "n ≥ 7, all at distance 2."
+        ),
+    ),
+    CodeRecord(
+        name="Kubischta-Teixeira [[5,1,2]]_3 with transversal Σ(360×3)",
+        n=5, k=1, distance=2, qudit_dim=3,
+        transversal_groups=["S1080"],
+        stabilizer=False,
+        reference="Kubischta & Teixeira, PRL 133, 030602 (2024) [arXiv:2402.01638]",
+        notes=(
+            "Smallest instance of the χ_4 family: 5 physical qutrits encode "
+            "1 logical qutrit at distance 2, Σ(360×3) transversal. Family "
+            "extends to n ≡ 2 (mod 3), n ≥ 5. Together with the [[7,1,2]]_3 "
+            "χ_3 family, these are the first published explicit transversal "
+            "pairings for a d=3 exceptional Σ-series subgroup."
+        ),
+    ),
+    CodeRecord(
+        name="Twisted unitary t-group codes (framework for other subgroups)",
         n=None, k=None, distance=None, qudit_dim=2,
         transversal_groups=[],
         stabilizer=False,
         reference="Kubischta & Teixeira, PRL 133, 030602 (2024) [arXiv:2402.01638]",
         notes=(
-            "General framework: twisted unitary t-groups correspond to quantum "
-            "codes with distance d=t+1 and many transversal gates. Subsumes the "
-            "Kubischta 2I ((7,2,3)) code and extends to other finite subgroups "
-            "of SU(d) via twisting by irreducible representations. Classification "
-            "of which SU(3) Sigma-series subgroups are realised remains open."
+            "General framework: twisted unitary t-groups correspond to "
+            "nonadditive quantum codes with distance d=t+1 and many transversal "
+            "gates. Explicit instances cataloged separately: 2I (Kubischta 2I "
+            "entry above) and Σ(360×3) (the two entries directly above). "
+            "Generalizing to Σ(72×3), Σ(216×3), or other SU(3) / SU(4) "
+            "subgroups is open — natural SWIFTbot follow-up."
         ),
         research_needed=True,
     ),
@@ -190,6 +221,191 @@ _CODES: list[CodeRecord] = [
             "on Clifford+T) to arbitrary rational-angle qubit rotations. "
             "Clifford gates are not transversal — Ouyang-Jing-Brennen code-switch "
             "to a Steane-like stabilizer code for the Clifford layer."
+        ),
+    ),
+    # --- Zhang-Wu-Huang-Zeng (2025) nonadditive codes with transversal
+    #     non-Clifford gates discovered via Stiefel-manifold optimization ---
+    CodeRecord(
+        name="Zhang et al. ((6,1,3)) with transversal 2T",
+        n=6, k=1, distance=3, qudit_dim=2,
+        transversal_groups=["BT"],
+        stabilizer=False,
+        reference=(
+            "Zhang, Wu, Huang, Zeng, arXiv:2504.20847 (2025). "
+            "Appendix A, single-point λ*=1 construction."
+        ),
+        notes=(
+            "Smallest known distance-3 qubit code supporting transversal "
+            "binary tetrahedral action. Derived via Stiefel-manifold search. "
+            "Related ((6,1,3)) variants support C_{2k} and binary dihedral BD_4 "
+            "along a continuous parameter λ*; we catalog the 2T=BT specialization "
+            "whose transversal group matches our d=2 registry."
+        ),
+    ),
+    CodeRecord(
+        name="Zhang et al. ((7,1,3)) with transversal 2I",
+        n=7, k=1, distance=3, qudit_dim=2,
+        transversal_groups=["BI"],
+        stabilizer=False,
+        reference=(
+            "Zhang, Wu, Huang, Zeng, arXiv:2504.20847 (2025)."
+        ),
+        notes=(
+            "New ((7,1,3))_{2I} construction at λ*=√(3/4), distinct from "
+            "Kubischta-Teixeira's λ*=0 original. Both give the same transversal "
+            "group (binary icosahedral, |BI|=120). Catalogued separately "
+            "because the parameter λ* affects optimality bounds and distillation "
+            "threshold estimates."
+        ),
+    ),
+    CodeRecord(
+        name="Zhang et al. ((7,1,3)) with transversal 2T",
+        n=7, k=1, distance=3, qudit_dim=2,
+        transversal_groups=["BT"],
+        stabilizer=False,
+        reference=(
+            "Zhang, Wu, Huang, Zeng, arXiv:2504.20847 (2025), Appendix C."
+        ),
+        notes=(
+            "New ((7,1,3)) code with transversal binary tetrahedral action. "
+            "Smaller |transversal| than 2I but a natural candidate for BT-based "
+            "gate synthesis."
+        ),
+    ),
+    CodeRecord(
+        name="Zhang et al. ((7,1,3)) with transversal 2O",
+        n=7, k=1, distance=3, qudit_dim=2,
+        transversal_groups=["BO"],
+        stabilizer=False,
+        reference=(
+            "Zhang, Wu, Huang, Zeng, arXiv:2504.20847 (2025), Appendix C."
+        ),
+        notes=(
+            "((7,1,3)) with transversal binary octahedral (=full qubit Clifford "
+            "lift) action. Bridges between single-qubit Clifford and non-Clifford "
+            "via the same code."
+        ),
+    ),
+    CodeRecord(
+        name="Zhang et al. ((8,1,3)) with transversal T^(1/4) via BD_64",
+        n=8, k=1, distance=3, qudit_dim=2,
+        transversal_groups=[],  # BD_64 not in our registry
+        stabilizer=False,
+        reference=(
+            "Zhang, Wu, Huang, Zeng, arXiv:2504.20847 (2025), Appendix E."
+        ),
+        notes=(
+            "Binary dihedral BD_64 transversal action supports T^(1/4) gate "
+            "fault-tolerantly — deepest rational-phase rotation in this family "
+            "with a direct transversal implementation. The ((7,1,3))_{BD_16} "
+            "variant from the same paper provides the first ((7,1,3)) supporting "
+            "transversal T; BD_32 on 7 qubits supports T√T. BD_{2n} not yet in "
+            "the SWIFTbot groups registry (open work)."
+        ),
+    ),
+    # --- Kubischta-Teixeira (2025) intrinsic codes ---
+    CodeRecord(
+        name="Kubischta-Teixeira [[13,2,3]] PI (intrinsic {14,2,3}_{SU(2)})",
+        n=13, k=2, distance=3, qudit_dim=2,
+        transversal_groups=["clifford", "BO"],  # single-qubit Clifford on each logical qubit
+        stabilizer=False,
+        reference=(
+            "Kubischta-Teixeira, arXiv:2511.14840 (2025), Example 2."
+        ),
+        notes=(
+            "Permutation-invariant 13-qubit code encoding 2 logical qubits at "
+            "distance 3. Derived as the minimal realization of the intrinsic "
+            "code {14, 2, 3}_{SU(2)} (depth-3 SU(2) symmetry in the spin-13/2 "
+            "irrep). The single-qubit Clifford group acts transversally on each "
+            "logical qubit. Exponential [[n,2,3]] family exists for odd n≥15. "
+            "The 'Schur bootstrap' certifies distance-3 protection across all "
+            "SU(2)-equivariant realizations in one shot."
+        ),
+    ),
+    CodeRecord(
+        name="Kubischta-Teixeira [[4,5,2]] multi-qutrit intrinsic {27,5,2}_{SU(3)}",
+        n=4, k=5, distance=2, qudit_dim=3,
+        transversal_groups=[],  # A_6 logical symmetry; not in our SU(3) registry
+        stabilizer=False,
+        reference=(
+            "Kubischta-Teixeira, arXiv:2511.14840 (2025), Example 3."
+        ),
+        notes=(
+            "Multi-qutrit realization of the intrinsic {27, 5, 2}_{SU(3)} code: "
+            "4 physical qutrits encode 5 logical qudits at distance 2. Logical "
+            "symmetry group is A_6 (alternating group on 6 elements). Companion "
+            "[[6,5,2]] realization also exists. First SU(3)-symmetry intrinsic "
+            "code with a multi-qutrit extrinsic instance; A_6 not yet in the "
+            "SWIFTbot d=3 groups registry."
+        ),
+    ),
+    CodeRecord(
+        name="Kubischta-Teixeira [[6,5,2]] multi-qutrit intrinsic {27,5,2}_{SU(3)}",
+        n=6, k=5, distance=2, qudit_dim=3,
+        transversal_groups=[],
+        stabilizer=False,
+        reference=(
+            "Kubischta-Teixeira, arXiv:2511.14840 (2025), Example 3."
+        ),
+        notes=(
+            "Alternative realization of {27, 5, 2}_{SU(3)} on 6 qutrits instead "
+            "of 4. Same logical symmetry A_6 and distance 2."
+        ),
+    ),
+    CodeRecord(
+        name="Kubischta-Teixeira [[4,2,2]] PI intrinsic {5,2,2}_{SU(2)}",
+        n=4, k=2, distance=2, qudit_dim=2,
+        transversal_groups=[],
+        stabilizer=False,
+        reference=(
+            "Kubischta-Teixeira, arXiv:2511.14840 (2025), Example 1."
+        ),
+        notes=(
+            "Permutation-invariant [[4,2,2]] qubit code realizing the intrinsic "
+            "{5,2,2}_{SU(2)} code (spin-2 irrep, depth 2). Other realizations "
+            "include the Chuang-Leung-Yamamoto 2-mode bosonic code and a "
+            "continuous CP^4 family of [[6,2,2]] qubit codes — all equivalent "
+            "under the Schur bootstrap."
+        ),
+    ),
+    # --- Herbert-Gross-Newman (2023) qutrit codes from SU(3) irreps ---
+    CodeRecord(
+        name="Herbert-Gross-Newman [[15,1,*]] qutrit, error-detecting",
+        n=15, k=1, distance=None, qudit_dim=3,
+        transversal_groups=[],  # He(3) = Heisenberg-Weyl at d=3; not in our registry
+        stabilizer=False,
+        reference=(
+            "Herbert, Gross, Newman, arXiv:2312.00162 (2023)."
+        ),
+        notes=(
+            "Qutrit error-detecting code embedded in SU(3) irrep (4,0) (15-dim "
+            "rep, k=1 logical qutrit). Transversal Heisenberg-Weyl He(3) action "
+            "via qutrit X and Z operators; protects against 'small SU(3) "
+            "displacements'. Codewords: |0̄⟩=(√3|0000⟩+|1122⟩)/3 etc. A companion "
+            "error-correcting [[247,1,*]] code from irrep (37,0) is impractical "
+            "but exhibits the same symmetry structure; we omit it from the main "
+            "catalog for tractability. Distance not formally given — the "
+            "detection claim is for SU(3)-displacement errors, not Pauli weight."
+        ),
+    ),
+    # --- Uy-Gangloff (2024) qudit codes from SU(d) irreps ---
+    CodeRecord(
+        name="Uy-Gangloff (d-1)^2-qudit family (smallest case d=5)",
+        n=16, k=1, distance=None, qudit_dim=5,
+        transversal_groups=[],
+        stabilizer=False,
+        reference=(
+            "Uy, Gangloff, arXiv:2410.02407 (2024)."
+        ),
+        notes=(
+            "Infinite family of qudit codes encoding one logical qudit on "
+            "(d-1)^2 physical qudits for odd d ≥ 5, via SU(d) irreducible "
+            "representations acting on symmetric tensor products. Transversal "
+            "Heisenberg-Weyl HW(d) action by construction. At d=5 → 16 physical "
+            "qudits/logical; d=7 → 36 physical/logical; d=11 → 100 physical/"
+            "logical. Distance parameters scale with the SU(d) representation "
+            "dimension but are not given in closed form in the main text; "
+            "computing them for specific d is a natural catalog-extension task."
         ),
     ),
 ]

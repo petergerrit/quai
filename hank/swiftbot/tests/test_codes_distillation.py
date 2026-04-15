@@ -214,11 +214,12 @@ def test_ajoc_reason_bypass_note_applies_to_rnd_and_mat() -> None:
 
 
 def test_catalog_growth_matches_documentation() -> None:
-    """Sanity check: catalog counts match what README/paper claim (12 codes,
-    9 distillation protocols). This is a load-bearing check — bumping the
-    catalog without updating docs fails CI here rather than silently."""
-    assert len(codes.list_all_codes()) == 12, (
-        f"codes catalog changed: README claims 12, got {len(codes.list_all_codes())}"
+    """Sanity check: catalog counts match what README/paper claim.
+    This is a load-bearing check — bumping the catalog without updating
+    docs fails CI here rather than silently."""
+    assert len(codes.list_all_codes()) == 25, (
+        f"codes catalog changed: expected 25, got {len(codes.list_all_codes())}. "
+        "If intentional, bump the number in README + paper §III catalog text."
     )
     assert len(distillation.list_all_protocols()) == 10, (
         f"distillation catalog changed: README claims 10, got "
