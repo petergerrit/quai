@@ -41,7 +41,7 @@ from typing import Sequence
 import numpy as np
 
 from swiftbot.state import ExtensionRegime, ExtensionVerdict
-from swiftbot.tools.sawicki import commutant_dimension
+from swiftbot.tools.sawicki import commutant_dimension, commutant_dimension_of_generators
 
 REPO = Path(__file__).resolve().parents[2]
 if str(REPO / "clifford_t") not in sys.path:
@@ -248,16 +248,54 @@ def extension_verdict(
                 f"dense in SU({d}) for algebraic generators — i.e. universal."
             ),
         )
+
+    # Ad_C is reducible. But Ad_{⟨C,T⟩} may still be irreducible if T mixes
+    # C's invariant subspaces — the Sawicki criterion is about the generated
+    # group S = C ∪ {T, T†}, not C alone. Check the commutant on the full
+    # generating set via the non-closed-set algorithm.
+    T = np.asarray(extension, dtype=complex)
+    try:
+        full_cdim = commutant_dimension_of_generators(
+            list(base_closure) + [T, T.conj().T]
+        )
+    except RuntimeError as exc:
+        return ExtensionVerdict(
+            regime="unknown",
+            d=d,
+            closure_size=None,
+            commutant_dim=base_cdim,
+            notes=(
+                f"Ad_C reducible (commutant_dim={base_cdim}); closure of "
+                f"⟨C, T⟩ exceeds cap={cap}; commutant-on-generators failed: "
+                f"{exc}."
+            ),
+        )
+    if full_cdim == 1:
+        return ExtensionVerdict(
+            regime="universal_likely",
+            d=d,
+            closure_size=None,
+            commutant_dim=full_cdim,
+            irreducible=True,
+            notes=(
+                f"Base Ad_C is reducible (commutant_dim={base_cdim}), but the "
+                f"extension T lifts the invariant-subspace structure: "
+                f"Comm(Ad_⟨C,T⟩) = 1 on the generating set. Closure of ⟨C, T⟩ "
+                f"exceeds cap={cap}, and by Benoist-de-Saxcé / Bourgain-Gamburd "
+                f"⟨C, T⟩ is dense in SU({d}) — i.e. universal. (Example: a "
+                f"generic Haar SU(d) extension of a reducible-Ad base.)"
+            ),
+        )
     return ExtensionVerdict(
         regime="infinite_but_not_dense",
         d=d,
         closure_size=None,
-        commutant_dim=base_cdim,
+        commutant_dim=full_cdim,
         irreducible=False,
         notes=(
-            f"Closure of ⟨C, T⟩ exceeds cap={cap}, so NOT finite. But base "
-            f"group Ad is reducible (commutant_dim={base_cdim}), so ⟨C, T⟩ "
-            f"also preserves a non-trivial Ad-invariant subspace and cannot "
-            f"be dense in all of SU({d})."
+            f"Closure of ⟨C, T⟩ exceeds cap={cap}, so NOT finite. Both Ad_C "
+            f"(commutant_dim={base_cdim}) and Ad_⟨C,T⟩ (commutant_dim="
+            f"{full_cdim}) are reducible, so ⟨C, T⟩ preserves a non-trivial "
+            f"Ad-invariant subspace and cannot be dense in all of SU({d})."
         ),
     )

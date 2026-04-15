@@ -143,6 +143,47 @@ def is_irreducible(matrices: Sequence[np.ndarray], *, integer_tol: float = 1e-6)
     return commutant_dimension(matrices, integer_tol=integer_tol) == 1
 
 
+def commutant_dimension_of_generators(
+    matrices: Sequence[np.ndarray],
+    *,
+    rank_tol: float | None = None,
+) -> int:
+    """Dimension of the common commutant of {Ad_g : g ∈ matrices} on su(d),
+    where `matrices` is a generating set --- not required to be closed.
+
+    For a finite generating set S, Comm(Ad_⟨S⟩) = ∩_{g∈S} Comm(Ad_g)
+    because M commuting with Ad_a and Ad_b implies M commutes with Ad_{ab}.
+    So the commutant of the (possibly infinite) generated group equals
+    the joint kernel over the finite generating set; this sidesteps the
+    closed-group requirement of `commutant_dimension`.
+
+    Implementation: for each g, build the (d²-1)²×(d²-1)² linear operator
+    vec(M) ↦ vec(Ad_g · M - M · Ad_g), stack, and return (d²-1)² − rank.
+    Memory is |S|·(d²-1)⁴ floats; fine through d=4.
+
+    Used by `stages.check_extension` for the case where ⟨C, T⟩ is infinite
+    (closure exceeded the classification cap) but we still want to know
+    whether Ad_{⟨C,T⟩} is irreducible --- i.e., whether a reducible-Ad base
+    group C has been lifted to universal by the extension T.
+    """
+    if not matrices:
+        raise ValueError("need at least one matrix")
+    mats = [np.asarray(g, dtype=complex) for g in matrices]
+    d = mats[0].shape[0]
+    basis = su_basis(d)
+    D = d * d - 1
+    I_D = np.eye(D)
+    blocks = []
+    for g in mats:
+        ad = adjoint_matrix(g, basis)
+        blocks.append(np.kron(ad, I_D) - np.kron(I_D, ad.T))
+    A = np.vstack(blocks)
+    if rank_tol is None:
+        rank_tol = max(A.shape) * np.finfo(A.dtype).eps * np.linalg.norm(A, ord=2)
+    rank = int(np.linalg.matrix_rank(A, tol=rank_tol))
+    return D * D - rank
+
+
 # ---------------------------------------------------------------------------
 # Distance to centre Z(SU(d)) = {e^{2πik/d} I : 0 ≤ k < d}
 # ---------------------------------------------------------------------------
