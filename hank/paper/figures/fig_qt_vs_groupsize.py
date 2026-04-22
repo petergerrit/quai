@@ -63,8 +63,6 @@ sizes_list = [216, 648, 1080]
 ext_style = [
     ("HV(1,1,0) Campbell",      dict(marker="o",  color="#1f77b4",
                                      label=r"$\mathrm{HV}(1,1,0)$")),
-    ("HV(1,2,0) Eq(27)",        dict(marker="s",  color="#ff7f0e",
-                                     label=r"$\mathrm{HV}(1,2,0)$")),
     ("HV(2,1,0)",               dict(marker="D",  color="#2ca02c",
                                      label=r"$\mathrm{HV}(2,1,0)$")),
     (r"$P(2\pi/9)$",             dict(marker="^",  color="#d62728",
@@ -79,27 +77,26 @@ ext_style = [
 fig, (ax, ax_legend) = plt.subplots(1, 2, figsize=(7.0, 4.0),
                                     gridspec_kw={"width_ratios": [3.2, 1.0]})
 
-# Kesten-McKay floor
+# Kesten-McKay floor (no legend entry — mentioned in caption)
 popt = [data[s]["Popt"] for s in sizes_list]
-ax.plot(sizes_list, popt, "--", color="0.3", lw=1.5,
-        label=r"$Q_{\mathrm{opt}}$ (Kesten--McKay floor)")
+ax.plot(sizes_list, popt, "--", color="0.3", lw=1.5)
 
-# Fixed extensions
+# Structured extensions (markers only, no connecting lines)
 for key, style in ext_style:
     qt = [data[s][key] for s in sizes_list]
-    ax.plot(sizes_list, qt, linestyle="-", markersize=9, linewidth=1.2, **style)
+    ax.plot(sizes_list, qt, linestyle="none", markersize=9, **style)
 
-# Haar-random (stars), one per batch per group
+# Best-random (black stars) — one per group, taking the best of the two batches
 rnd_label_shown = False
 for s in sizes_list:
-    for bkey in ("rnd_batch1", "rnd_batch2"):
-        qt_val = data[s][bkey]
-        if not rnd_label_shown:
-            ax.plot(s, qt_val, marker="*", color="k", markersize=14, zorder=5,
-                    label=r"Haar-random (best of 10, per batch)")
-            rnd_label_shown = True
-        else:
-            ax.plot(s, qt_val, marker="*", color="k", markersize=14, zorder=5)
+    qt_val = min(data[s]["rnd_batch1"], data[s]["rnd_batch2"])
+    if not rnd_label_shown:
+        ax.plot(s, qt_val, marker="*", color="k", markersize=14, zorder=5,
+                label="Best random", linestyle="none")
+        rnd_label_shown = True
+    else:
+        ax.plot(s, qt_val, marker="*", color="k", markersize=14, zorder=5,
+                linestyle="none")
 
 ax.set_xscale("log")
 ax.set_yscale("log")

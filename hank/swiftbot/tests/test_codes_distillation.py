@@ -221,7 +221,7 @@ def test_catalog_growth_matches_documentation() -> None:
         f"codes catalog changed: expected 25, got {len(codes.list_all_codes())}. "
         "If intentional, bump the number in README + paper §III catalog text."
     )
-    assert len(distillation.list_all_protocols()) == 10, (
-        f"distillation catalog changed: README claims 10, got "
+    assert len(distillation.list_all_protocols()) == 14, (
+        f"distillation catalog changed: README claims 14, got "
         f"{len(distillation.list_all_protocols())}"
     )

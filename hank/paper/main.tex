@@ -13,6 +13,17 @@
 \usepackage[plain]{fancyref}
 \usepackage{varioref}
 \usepackage{multirow}
+\newcommand{\cmark}{\textcolor{ForestGreen}{\ensuremath{\checkmark}}}
+\newcommand{\xmark}{\textcolor{BrickRed}{\ensuremath{\times}}}
+\newcommand{\pmark}{\textcolor{Orange}{\ensuremath{\sim}}}
+\newcommand{\nmark}{\textcolor{gray}{\ensuremath{\text{--}}}}
+% Double rules at top/bottom of every booktabs table (booktabs loaded later)
+\AtBeginDocument{%
+  \let\origtoprule\toprule
+  \let\origbottomrule\bottomrule
+  \renewcommand{\toprule}{\origtoprule\origtoprule}%
+  \renewcommand{\bottomrule}{\origbottomrule\origbottomrule}%
+}
 \usepackage{tikz}
 \usepackage{booktabs}
 \usepackage{physics}
@@ -73,7 +84,7 @@ We introduce \SWIFTbot, a pipeline for discovering efficient gate sets for fault
 \section{Introduction}\label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Fault-tolerant quantum computation requires a finite universal gate set whose members have cheap physical realizations. The tension between these requirements is sharp: the Eastin--Knill theorem~\cite{EastinKnill:2009} forbids any non-trivial quantum error-correcting code from admitting a universal \emph{transversal} gate set. Practical designs therefore split the gate set into a transversal subgroup $\mathcal{C}\subset\mathrm{SU}(d)$ that the error-correcting code protects cheaply, plus one or more non-transversal extension gates $g$ made fault-tolerant by any of several routes: magic-state distillation~\cite{Bravyi:2004isx,Bravyi:2012czv}, magic-state cultivation~\cite{Gidney:2024cultivation}, code switching~\cite{OuyangJingBrennen:2024}, or beyond-stabilizer codes with native non-Clifford transversal action~\cite{Kubischta:2I,DenysLeverrier:2023,DenysLeverrier:2024}. Each extension gate $g$ comes with its own cost: a dedicated magic state, a code that supports it transversally, a distillation or cultivation circuit, or some combination of the above.
+Fault-tolerant quantum computation requires a finite universal gate set whose members have cheap physical realizations. The tension between these requirements is sharp: the Eastin--Knill theorem~\cite{EastinKnill:2009} forbids any non-trivial quantum error-correcting code from admitting a universal \emph{transversal} gate set. Practical designs therefore split the gate set into a transversal subgroup $\mathcal{C}\subset\mathrm{SU}(d)$ that the error-correcting code protects cheaply, plus one or more non-transversal extension gates $g$ made fault-tolerant by any of several routes: magic-state distillation (MSD)~\cite{Bravyi:2004isx,Bravyi:2012czv}, magic-state cultivation~\cite{Gidney:2024cultivation}, code switching~\cite{OuyangJingBrennen:2024}, or beyond-stabilizer codes with native non-Clifford transversal action~\cite{Kubischta:2I,DenysLeverrier:2023,DenysLeverrier:2024}. Each extension gate $g$ comes with its own cost: a dedicated magic state, a code that supports it transversally, a distillation or cultivation circuit, or some combination of the above.
 
 \paragraph*{Why qudits.}
 The qubit version of this story has a standard resolution: Clifford$+T$~\cite{Kitaev:1997wr,Bravyi:2004isx}, with Clifford transversal on Steane, Reed--Muller, and Bravyi--Haah families and $T$ distilled via triorthogonal MSD~\cite{Bravyi:2004isx,Bravyi:2012czv}; single-qubit synthesis into this gate set is solved with certified $T$-count bounds~\cite{Ross:2014kbr,Kliuchnikov:2012pla}. This toolkit is mature but not closed: as we show for the binary icosahedral base $2I$ (\cref{sec:d2}), systematic $(\mathcal{C},g)$ exploration beyond the canonical choice remains productive even at $d=2$, and four developments motivate extending the search into qudit registers at $d>2$.
@@ -82,7 +93,7 @@ Qudit hardware has matured on several fronts. Trapped-ion platforms have demonst
 
 Such hardware development has been matched by advances in theoretical proposals for fault tolerance, both on the QEC side and on the non-transversal-gate side.
 
-Qudit codes have progressed beyond the qubit toolkit. Gottesman's prime-$d$ stabilizer construction~\cite{Gottesman:1998} spelled out the foundational split from the qubit case; beyond stabilizer, the \emph{nonadditive} Kubischta $((7,2,3))_{2I}$ code~\cite{Kubischta:2I} and Denys--Leverrier \emph{covariant} $2T$/$2O$ codes~\cite{DenysLeverrier:2023,DenysLeverrier:2024} carry transversal non-Clifford groups that sidestep the Anderson--Jochym-O'Connor qubit-stabilizer no-go~\cite{Anderson:2014}. HEP-motivated bosonic proposals such as the $2T$-quoctit encode specific discrete subgroups natively at $d=8$~\cite{Kurkcuoglu:2025quoctit}. Non-local qLDPC memories like the bivariate-bicycle code~\cite{Bravyi:2024bb} need connectivity graphs whose natural hardware substrates --- the same platforms above --- make qudit qLDPC codes~\cite{Spencer:2025qldpc,Vasic:2025qldpc} a convergence rather than two separate programs.
+Qudit codes have progressed beyond the qubit toolkit. Gottesman's prime-$d$ stabilizer construction~\cite{Gottesman:1998} spelled out the foundational split from the qubit case; beyond stabilizer, the \emph{nonadditive} Kubischta $((7,2,3))_{2I}$ code~\cite{Kubischta:2I} and Denys--Leverrier \emph{covariant} $2T$/$2O$ codes~\cite{DenysLeverrier:2023,DenysLeverrier:2024} carry transversal non-Clifford groups that sidestep the Anderson--Jochym-O'Connor (AJOC) qubit-stabilizer no-go~\cite{Anderson:2014}. HEP-motivated bosonic proposals such as the $2T$-quoctit encode specific discrete subgroups natively at $d=8$~\cite{Kurkcuoglu:2025quoctit}. Non-local qLDPC memories like the bivariate-bicycle code~\cite{Bravyi:2024bb} need connectivity graphs whose natural hardware substrates --- the same platforms above --- make qudit qLDPC codes~\cite{Spencer:2025qldpc,Vasic:2025qldpc} a convergence rather than two separate programs.
 
 Distillation and cultivation are advancing in parallel. Qutrit triorthogonal distillation~\cite{Campbell:2012jna,PrakashSaha:2025} reaches $\gamma\approx 1.51$, beating qubit triorthogonal codes below $\sim\!300$ physical qudits; asymptotically-good qudit constructions~\cite{WillsHsiehYamasaki:2025,Cervia:2025agc} deliver constant-overhead MSD. Magic-state cultivation~\cite{Gidney:2024cultivation,Vaknin:2025cultivation,Rosenfeld:2025cultivation} is currently qubit-native and surface-code-specific, and an open qudit analogue would close one of the two remaining arguments for $d=2$ canonicalization (\cref{sec:discussion_ft}).
 
@@ -105,7 +116,7 @@ Code and data are released with this paper~\cite{swiftbot_github}. \cref{sec:qco
 \section{Background}\label{sec:qco}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We briefly review the three ingredients used throughout: the Quantum Circuit Overhead $\QT$~\cite{Slowik:2025qco} as our primary figure of merit, the Sawicki--Karnas criterion~\cite{Sawicki:2016kmo} for ruling out non-universal extensions without running QCO, and the Howard--Vala family~\cite{Howard:2012fva} and discrete-subgroup-approximation (DSA) primitive-gate series~\cite{Lamm:2019bik,Gustafson:2022xdt} as the principal sources of candidate extensions at $d \geq 3$.
+We briefly review the three ingredients used throughout: the Quantum Circuit Overhead (QCO) figure $\QT$~\cite{Slowik:2025qco} as our primary figure of merit, the Sawicki--Karnas criterion~\cite{Sawicki:2016kmo} for ruling out non-universal extensions without running QCO, and the Howard--Vala family~\cite{Howard:2012fva} and discrete-subgroup-approximation (DSA) primitive-gate series~\cite{Lamm:2019bik,Gustafson:2022xdt} as the principal sources of candidate extensions at $d \geq 3$.
 
 \subsection{$\delta$-approximate $t$-designs and $\QT$}\label{sec:qco_qt}
 
@@ -252,6 +263,8 @@ We validate the \SWIFTbot QCO kernel against the $d=2$ reference dataset of S{\l
 
 \emph{Two remarks.} First, Clifford$+T$ has $\QT$ roughly $14\times$ \emph{larger} than the arbitrary-SU(2) baseline ($51.9$ vs $3.79$)---i.e.\ its approximation-exponent overhead is worse by an order of magnitude; commensurability between $P(\pi/4)$ and the Clifford orbit slows the random walk~\cite{Slowik:2025qco}. This is a $\QT$ claim, not a verdict on Clifford$+T$ itself: when the target is structured (\cref{sec:lamm}), the ranking inverts. Second, the \texttt{BI} ratio $\QT/\Popt \approx 1.27$ at $10^4$ samples is far closer to saturation than Clifford's and arrives with a cataloged fault-tolerant code~\cite{Kubischta:2I}; the empirical $\delta$ distribution on \texttt{BI} has median $0.38$ ($\QT\simeq 4.97$) and $5$th-percentile $0.31$, and a $2000$-resample bootstrap on the best-of-$10^4$ $\QT$ gives a tight $95\%$ CI of $[3.57, 3.69]$. The best-of-$10^4$ floor is the natural super-golden candidate predicted by~\cite{Sarnak:2015}.
 
+\emph{BI with structured rational diagonals.} The \texttt{BI} super-golden number above is a \emph{Haar} ratio; it does not tell us whether any single deterministic $P(\theta)$ extension is competitive. We probed this with a six-angle rational diagonal panel on \texttt{BI} at $t=10$ (\cref{tab:bi_diag}). Five of the six --- $\theta\in\{\pi/4,\pi/8,2\pi/9,\pi/9,\pi/18\}$ --- show the same commensurability slowdown as Clifford$+T$, with $\QT/\Popt$ ratios from $7.8$ to $167$. The exception is $P(2\pi/5)$, which gives $\QT = 7.75$, ratio $2.76$ to the floor. The pattern is structurally sensible: $2I$ has a $5$-fold symmetry inherited from the icosahedron, so $2\pi/5$ is the rational angle \emph{transverse} to the orbit, while all the cyclotomic-$8$th and $9$th/$18$th-root angles align with subgroup commensurabilities. \texttt{BI}$+P(2\pi/5)$ is therefore a candidate \emph{deterministic} super-golden gate at $d=2$: within a factor $2.2$ of the Haar best-of-$10^4$, exactly synthesizable in $\mathbb{Z}[\omega_{10}]$, and inherits the Kubischta $((7,2,3))$ transversal code on the base.
+
 \begin{table}[t]
 \centering
 \caption{\label{tab:d2_validation}$d=2$ validation of the \SWIFTbot QCO kernel against the reference dataset of S{\l}owik, Duli{\'a}n, and Sawicki~\cite{Slowik:2025qco}, all at $t=50$. The Clifford$+P(\pi/4)$ row is deterministic; rnd rows report the best $\QT$ across $20$ Haar-$\mathrm{SU}(2)$ samples for Clifford and \texttt{hurwitz}, and $10^4$ samples for \texttt{BI}. $\Popt$ is the Kesten--McKay floor of \cref{eq:Popt}; \texttt{BI} has no published QCO reference.}
@@ -269,11 +282,28 @@ Clifford ($24$)         & rnd        & $3.79$  & $\approx 3.7$ & $3.47$ \\
 \end{tabular}
 \end{table}
 
+\begin{table}[t]
+\centering
+\caption{\label{tab:bi_diag}Binary icosahedral $\texttt{BI}$ ($|\mathcal{C}|=120$) with rational-angle diagonal extensions $P(\theta)$ at $t=10$, single-shot. $\Popt = 2.81$. Only $P(2\pi/5)$ avoids the icosahedral commensurability slowdown.}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+$\theta$ & $\delta$ & $\QT$ & $\QT/\Popt$ \\
+\midrule
+$\pi/4$ (canonical $T$)  & $0.805$ & $22.04$  & $7.84$ \\
+$\pi/8$                  & $0.949$ & $91.93$  & $32.7$ \\
+$2\pi/9$ (DSA target)    & $0.844$ & $28.23$  & $10.0$ \\
+$\pi/9$                  & $0.960$ & $116.7$  & $41.5$ \\
+$\pi/18$                 & $0.990$ & $470.3$  & $167$ \\
+$\boldsymbol{2\pi/5}$    & $\mathbf{0.539}$ & $\mathbf{7.75}$ & $\mathbf{2.76}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{$d=3$ survey}\label{sec:d3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-With the \SWIFTbot kernel validated at $d=2$ (\cref{sec:d2}), we turn to the first systematic $\QT$ ranking at $d=3$. The survey covers the three irreducible-adjoint $\Sigma$-series subgroups of $\mathrm{SU}(3)$---$\Sigmathree{72}$, $\Sigmathree{216}$, and $\Sigmathree{360}$---each extended by a common panel of seven candidate gates. (We use the $\Sigma(m\!\times\!3)$ notation of~\cite{Fairbairn:1964,GrimusLudl:2010}, where $|\Sigma(m\!\times\!3)| = 3m$; the three bases thus have orders $216$, $648$, $1080$.) The adjoints are irreducible --- the $8$-dimensional su$(3)$ representation does not split --- by the character tables of~\cite{GrimusLudl:2010}. The smaller groups $\Sigmathree{36}$ (the $108$-element crystallographic Valentiner analogue) and $\Sigma(60)\simeq A_5$ both have reducible adjoint at $d=3$: the $8$-dimensional su$(3)$ representation splits into smaller irreps of the subgroup, as can be read directly from the character tables~\cite{GrimusLudl:2010} or verified via \cref{eq:comm_dim} with $\dim\mathrm{Comm}(\mathrm{Ad}_\mathcal{C})>1$. These are not automatically non-universal: the $\Sigma$-invariant subspaces of su$(3)$ are not aligned with the Cartan--root decomposition (the Fourier element $V \in \Sigmathree{36}$ mixes them), so even a generic diagonal extension lifts $\dim\mathrm{Comm}(\mathrm{Ad}_\mathcal{S})$ to $1$ and the Sawicki--Karnas criterion is satisfied on $\mathcal{S}$. We defer $\Sigmathree{36}$ and $A_5$ from this paper purely for compute reasons --- the $t=5$/$t=10$ panel budget was set by the three irreducible-adjoint $\Sigma$-series bases --- and flag a $\Sigmathree{36}$/$A_5$ panel as natural follow-up work.\footnote{TODO: insert $\Sigmathree{36}+\{$panel$\}$ and $A_5+\{$panel$\}$ Q$_T$ data when compute is available; the SWIFTbot Stage-2 screen now classifies $\Sigmathree{36}$+rnd as \texttt{universal\_likely} via the corrected $\mathrm{Comm}(\mathrm{Ad}_\mathcal{S})$ check on generators.}
+With the \SWIFTbot kernel validated at $d=2$ (\cref{sec:d2}), we turn to the first systematic $\QT$ ranking at $d=3$. The survey covers the three irreducible-adjoint $\Sigma$-series subgroups of $\mathrm{SU}(3)$---$\Sigmathree{72}$, $\Sigmathree{216}$, and $\Sigmathree{360}$---each extended by a common panel of seven candidate gates. (We use the $\Sigma(m\!\times\!3)$ notation of~\cite{Fairbairn:1964,GrimusLudl:2010}, where $|\Sigma(m\!\times\!3)| = 3m$; the three bases thus have orders $216$, $648$, $1080$.) The adjoints are irreducible --- the $8$-dimensional su$(3)$ representation does not split --- by the character tables of~\cite{GrimusLudl:2010}. The smaller groups $\Sigmathree{36}$ (the $108$-element crystallographic Valentiner analogue) and $\Sigma(60)\simeq A_5$ both have reducible adjoint at $d=3$: the $8$-dimensional su$(3)$ representation splits into smaller irreps of the subgroup, as can be read directly from the character tables~\cite{GrimusLudl:2010} or verified via \cref{eq:comm_dim} with $\dim\mathrm{Comm}(\mathrm{Ad}_\mathcal{C})>1$. These are not automatically non-universal: the $\Sigma$-invariant subspaces of su$(3)$ are not aligned with the Cartan--root decomposition (the Fourier element $V \in \Sigmathree{36}$ mixes them), so even a generic diagonal extension lifts $\dim\mathrm{Comm}(\mathrm{Ad}_\mathcal{S})$ to $1$ and the Sawicki--Karnas criterion is satisfied on $\mathcal{S}$. We defer $\Sigmathree{36}$ and $A_5$ from this paper purely for compute reasons --- the $t=5$/$t=10$ panel budget was set by the three irreducible-adjoint $\Sigma$-series bases --- and flag a $\Sigmathree{36}$/$A_5$ panel as natural follow-up work; the \SWIFTbot Stage-2 screen now classifies $\Sigmathree{36}$+rnd as \texttt{universal\_likely} via the corrected $\dim\mathrm{Comm}(\mathrm{Ad}_\mathcal{S})$ check on generators.
 
 The panel fixes seven extensions per base group with identical parameters across the three groups. Two are Howard--Vala representatives of the two non-trivial Clifford-equivalence orbits at $d=3$ (\cref{eq:HV_def}): $\HV{1}{1}{0}$ (Campbell's magic gate) and $\HV{2}{1}{0}$. Three are diagonal phase gates $P(\theta)$ at angles $\theta \in \{2\pi/9,\,\pi/9,\,2\pi/5\}$, chosen to span both the cyclotomic-$9$th-root sector relevant to \cref{sec:lamm} and the coarser $2\pi/5$ angle that generates no low-order closure against any of the three base groups. The remaining two slots per group are independent batches of ten Haar-distributed SU(3) unitaries (the \emph{rnd} baseline). All seven extensions pass the Stage~2 universality screen (one-dimensional adjoint commutant, bounded closure open past the $|\mathcal{C}|\leq 1080$ cap).
 
@@ -283,28 +313,31 @@ We evaluate the panel at two design orders. The $t=10$ pass supplies the headlin
 
 \begin{table*}[t]
 \centering
-\caption{\label{tab:d3_tier1}$d=3$ survey at $t=10$, ranked within each group by $\delta$. Rnd rows report the best $\delta$ across two independent Haar draws. Kesten--McKay floor $\Popt$: $2.692$, $2.544$, $2.495$ for $\Sigmathree{72,216,360}$.}
+\caption{\label{tab:d3_tier1}$d=3$ survey at $t=10$, ranked within each group by $\delta$. Rnd rows report the best $\delta$ across two independent Haar draws. Strange-state ($U_S$) rows are at $t=5$ only and marked $\dagger$; the $t=10$ rerun was deferred (one-shot, but $\sim$3\,h CPU on the largest base). Kesten--McKay floor $\Popt$: $2.692$, $2.544$, $2.495$ for $\Sigmathree{72,216,360}$.}
 \begin{tabular}{llccc}
 \toprule
 Group & Extension & $\delta$ & $\QT$ & $\QT/\log|\mathcal{C}|$ \\
 \midrule
-\multirow{6}{*}{$\Sigmathree{72}$}
+\multirow{7}{*}{$\Sigmathree{72}$}
    & rnd               & $0.2605$ & $3.996$   & $0.744$ \\
+   & $U_S^\dagger$     & $0.2845$ & $4.276$   & $0.797$ \\
    & $\HV{2}{1}{0}$    & $0.5927$ & $10.277$  & $1.911$ \\
    & $P(2\pi/5)$       & $0.6545$ & $12.681$  & $2.360$ \\
    & $\HV{1}{1}{0}$    & $0.6764$ & $13.750$  & $2.559$ \\
    & $P(2\pi/9)$       & $0.8830$ & $43.208$  & $8.041$ \\
    & $P(\pi/9)$        & $0.9698$ & $175.561$ & $32.671$ \\
 \cmidrule(lr){2-5}
-\multirow{6}{*}{$\Sigmathree{216}$}
+\multirow{7}{*}{$\Sigmathree{216}$}
    & rnd               & $0.2107$ & $4.157$   & $0.643$ \\
    & $\HV{2}{1}{0}$    & $0.5833$ & $12.011$  & $1.856$ \\
+   & $U_S^\dagger$     & $0.2845$ & $5.150$   & $0.797$ \\
    & $P(2\pi/5)$       & $0.6545$ & $15.273$  & $2.360$ \\
    & $\HV{1}{1}{0}$    & $0.6764$ & $16.561$  & $2.559$ \\
    & $P(2\pi/9)$       & $0.8830$ & $52.039$  & $8.041$ \\
    & $P(\pi/9)$        & $0.9698$ & $211.443$ & $32.671$ \\
 \cmidrule(lr){2-5}
-\multirow{6}{*}{$\Sigmathree{360}$}
+\multirow{7}{*}{$\Sigmathree{360}$}
+   & $U_S^\dagger$     & $0.1948$ & $4.270$   & $0.611$ \\
    & rnd               & $0.1784$ & $4.052$   & $0.579$ \\
    & $\HV{2}{1}{0}$    & $0.5698$ & $12.419$  & $1.775$ \\
    & $P(2\pi/5)$       & $0.6545$ & $16.478$  & $2.360$ \\
@@ -328,6 +361,10 @@ First, every structured extension (rational-angle $P(\theta)$ and both HV repres
 Second, the rnd extensions do not follow this pattern: the best-sample $\delta$ decreases from $0.26$ on $\Sigmathree{72}$ to $0.18$ on $\Sigmathree{360}$, so rnd-extended $\QT$ stays close to $\Popt$ rather than growing with $\log|\mathcal{C}|$. A generic Haar SU(3) draw couples to every su$(3)$ direction, so it also activates the subdominant spectral channels that exist in the larger group but are absent in the smaller one; the structured diagonal extensions cannot reach those channels.
 
 Third, the narrow-angle $P(\pi/9)$ row produces $\delta$ within $3\%$ of unity and $\QT$ two orders of magnitude above the rnd baseline --- a $d=3$ analog of the $14\times$ Clifford$+T$ penalty at $d=2$. Commensurability between the rational angle and the base-group orbit slows the walk drastically when the angle is finely tuned to the group structure.
+
+The strange-state row $U_S$ (Howard--Campbell qutrit ``strange'' magic state lifted to a single-qutrit unitary) is the only structured extension in our panel that behaves like a Haar draw rather than a $\delta$-degenerate cyclotomic gate: $\delta$ tracks the rnd baseline within a few percent on every $\Sigma$ base ($0.28$ on $\Sigmathree{72,216}$, $0.19$ on $\Sigmathree{360}$), and $\QT/\Popt$ stays in the $1.6$--$2.0$ band where the rnd entries sit. The structural reason is that $U_S$ is a generic SU(3) rotation up to phases --- it lacks the cyclotomic-root resonance that traps $P(\theta)$ rows at $\delta\sim\!0.66$--$0.97$. Operationally this is the most useful structured extension we test at $d=3$: it carries a published distillation route (ternary Golay $[[11,1,5]]_3$~\cite{Prakash:2020lowoverhead}) and reaches a near-rnd $\QT$ ratio without depending on a Haar draw. The strange-state rows in \cref{tab:d3_tier1} are at $t=5$ only --- the $t=10$ rerun was deferred at $\sim$3\,h CPU on the largest base; we expect the same small lift at $t=10$ that the $\HV{2}{1}{0}$ row exhibits.
+
+\subsection{Apples-to-apples Haar panel}\label{sec:d3_apples}
 
 To separate the base-group effect from rnd-extension variance, we evaluated a single batch of ten arbitrary-SU(3) extensions identically on all three groups. \cref{tab:d3_apples} lists the best-sample $\delta$ per matrix.
 
@@ -378,7 +415,32 @@ The degeneracy holds for every one of the 50 draws: $\delta$ on $\Sigmathree{72}
 
 The best $(\mathcal{C},g)$ pair found in the survey is the \texttt{apple04} rnd matrix on $\Sigmathree{360}$ at $t=5$, with $\delta = 0.1197$ and $\QT = 3.291$ --- within $32\%$ of $\Popt = 2.495$. The best deterministic extension is $\HV{2}{1}{0}$ on $\Sigmathree{72}$, giving $\QT = 10.28$ at $t=10$, a factor $3.8$ above $\Popt = 2.692$. The ranking order at $t=5$ and $t=10$ matches for every row except the $\HV{2}{1}{0}$ floor lift already discussed; the four-decimal cross-group $\delta$-degeneracy and its ordering consequences are therefore not a finite-$t$ artifact but a structural feature of the rational-angle and Howard--Vala extensions on this $\Sigma$-series.
 
-The rnd winners like \texttt{apple04} are generic Haar draws, not algebraic unitaries over a known ring, and off-the-shelf magic-state distillation protocols target structured states: $|T\rangle$ via Bravyi--Kitaev / Bravyi--Haah triorthogonal~\cite{Bravyi:2004isx,Bravyi:2012czv}, rational-angle rotations $|\psi(\theta)\rangle$ via programmable MSD on a Clifford$+T$ substrate~\cite{DuclosCianciPoulin:2015,CampbellOGorman:2016,CampbellHoward:2017}, or cyclotomic phases via code-switching to a permutation-invariant code~\cite{OuyangJingBrennen:2024}. We are not aware of any published protocol that certifies fault-tolerant preparation of a generic Haar SU(d) magic state; the $\QT$ figure therefore ranks approximation reachability, not fault-tolerant cost, and the rnd winners of \cref{tab:d3_tier1} should be read as upper bounds on what a structured near-optimal extension could achieve --- open on both the algebraic-synthesis and code-distillation sides.
+The rnd winners like \texttt{apple04} are generic Haar draws, not algebraic unitaries over a known ring, and off-the-shelf magic-state distillation protocols target structured states: $|T\rangle$ via Bravyi--Kitaev / Bravyi--Haah triorthogonal~\cite{Bravyi:2004isx,Bravyi:2012czv}, rational-angle rotations $|\psi(\theta)\rangle$ via programmable MSD on a Clifford$+T$ substrate~\cite{DuclosCianciPoulin:2015,CampbellOGorman:2016,CampbellHoward:2017}, or cyclotomic phases via code-switching to a permutation-invariant (PI) code~\cite{OuyangJingBrennen:2024}. We are not aware of any published protocol that certifies fault-tolerant preparation of a generic Haar SU(d) magic state; the $\QT$ figure therefore ranks approximation reachability, not fault-tolerant cost, and the rnd winners of \cref{tab:d3_tier1} should be read as upper bounds on what a structured near-optimal extension could achieve --- open on both the algebraic-synthesis and code-distillation sides.
+
+\section{$d=4$ Fairbairn pilot}\label{sec:d4}
+
+To probe whether the $\QT/\Popt \to 1$ trend observed at $d=2,3$ continues at $d=4$, we ran a small Fairbairn-subgroup pilot at low design order. Compute is the binding constraint: the largest irreps scale as $t^6$ at $d=4$ and matrix storage as $t^{12}$, so the pilot stops at $t=4$ on the four smallest groups ($A_5$, $\Sigma(60{\times}4)$, $\Sigma(120{\times}4)_{1,2}$) and at $t=2$ on $\Sigma(720{\times}4)$ and $S_7$. The extension panel is a four-angle diagonal grid $P(\theta)$ with $\theta\in\{0.0625,\,0.125,\,0.25,\,0.4\}$ rad (chosen as a generic test grid, not paper-aligned cyclotomic angles), a two-mode \emph{angles} extension at the same scale, and a single arbitrary-SU(4) (\emph{rnd}) draw at $t\in\{3,4\}$ on the four small groups. \cref{tab:d4_pilot} reports the best-sample $\QT$ and ratio to the Kesten--McKay floor for each pair.
+
+Two observations carry over from the $d=2,3$ surveys. (i) Structured small-angle $P(\theta)$ extensions sit at $\QT/\Popt \in [10,\,1000]$ depending on how finely the angle resonates with the base-group orbit --- the same commensurability slowdown seen for Clifford$+T$ at $d=2$ and $\Sigma+P(\pi/9)$ at $d=3$, now amplified by the extra small angles in this test grid. (ii) The single arbitrary-SU(4) draws settle in the $\QT/\Popt \in [1.0,\,1.9]$ range, qualitatively matching the Haar super-golden behaviour at $d=2,3$. Most striking: $A_5+\mathrm{rnd}$ at $t=3$ gives $\QT = 3.007$, ratio $1.0006$ to the floor $\Popt = 3.005$ --- essentially saturating Kesten--McKay on a single sample; the $t=4$ rerun lifts this to ratio $1.12$, indicating the saturation is a low-design-order artefact rather than a converged number, but the closeness already suggests $A_5$ is a strong $d=4$ super-golden candidate. The $\Sigma(120{\times}4)_2$ pair at $t=3,4$ also lands in the $1.8$--$1.9$ ratio band, comparable to $\Sigmathree{360}$'s $1.32$ at $d=3$. All Fairbairn rows in \cref{tab:distillation} carry \xmark\ in every fault-tolerance column.
+
+\begin{table}[t]
+\centering
+\caption{\label{tab:d4_pilot}$d=4$ Fairbairn-subgroup pilot: best-sample $\QT$ per $(\mathcal{C},g)$ pair at the largest design order achieved. ``s.'' columns indicate the $t$-design depth reached. Columns under $P(\theta)$ are diagonal phase gates at the four angles $\theta$ (rad); ``2-ang'' is the 2-angle diagonal at $\theta_1=0.25$; ``rnd'' is a single arbitrary-SU(4) draw at $t=3$ then $t=4$. $\QT/\Popt$ is shown in parentheses for the rnd column. ``---'' marks pairs not run.}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+$\mathcal{C}$ & $|\mathcal{C}|$ & $\Popt$ & $0.0625$ & $0.125$ & $0.25$ & $0.4$ & rnd ($t{=}3,t{=}4$) \\
+\midrule
+$A_5$                    & $60$   & $3.01$ & $1703$ & $428$  & $110$ & $45$ & $3.01\,(1.00),\,3.37\,(1.12)$ \\
+$\Sigma(60{\times}4)$    & $240$  & $2.67$ & $948$  & $237$  & $60$  & $24$ & $4.58\,(1.71),\,4.92\,(1.84)$ \\
+$\Sigma(120{\times}4)_1$ & $480$  & $2.58$ & $1068$ & $267$  & $67$  & $27$ & $3.92\,(1.52),\,4.42\,(1.71)$ \\
+$\Sigma(120{\times}4)_2$ & $480$  & $2.58$ & $2567$ & $646$  & $166$ & $68$ & $4.68\,(1.82),\,4.96\,(1.92)$ \\
+$\Sigma(720{\times}4)$   & $2880$ & $2.42$ & $1032$ & $258$  & $64$  & $25$ & --- \\
+$S_7$                    & $5040$ & $2.39$ & $1105$ & $276$  & $68$  & $26$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{The DSA primitive-gate target family}\label{sec:lamm}
 
@@ -387,7 +449,11 @@ Many applications do not need to approximate every unitary in SU($d$); they need
 \paragraph*{A concrete target family.}
 We work out the case of the $\Sigmathree{36}$ encoding as a representative example; different subgroups in the series produce different coefficient sets. The trace gate $U_\mathrm{Tr}(\theta) = \mathrm{diag}_{g \in \mathcal{C}}\bigl(e^{i \theta\,\mathrm{Re}\,\mathrm{Tr}(g)}\bigr)$ appears in the magnetic plaquette of any DSA lattice gauge simulation~\cite{Lamm:2019bik}. For $\Sigmathree{36}$, Gustafson~\emph{et~al.}~\cite{GustafsonJi:2024sig} reduce it to a three-qubit trace register: the $14$ conjugacy classes collapse to $7$ distinct $\mathrm{Re}\,\mathrm{Tr}(g)\in\{3,\pm 1,\pm\tfrac{1}{2},-\tfrac{3}{2},0\}$, and a Boolean map $(p,q,r,s,t)\mapsto(v_0,v_1,v_2)$ separates them. On the $(v_0,v_1,v_2)$ register the trace Hamiltonian factorizes as
 \begin{equation}
-  H_\mathrm{Tr} = \tfrac{1}{16}\bigl[3\,(III{+}IIZ{+}IZI) + 5\,IZZ + 1\,ZII + 9\,(ZIZ{+}ZZI) + 15\,ZZZ\bigr],
+\begin{aligned}
+  H_\mathrm{Tr} = \tfrac{1}{16}\bigl[\,
+    & 3\,(III{+}IIZ{+}IZI) + 5\,IZZ \\
+    & {}+ ZII + 9\,(ZIZ{+}ZZI) + 15\,ZZZ\,\bigr],
+\end{aligned}
 \end{equation}
 so $U_\mathrm{Tr}(\theta)$ decomposes (up to Clifford conjugation) into $R_Z$ rotations at angles proportional to $\alpha_c\theta$ for $\alpha_c \in \{1,3,5,9,15\}$ --- the five distinct non-zero coefficients in the decomposition. These coefficients are specific to $\Sigmathree{36}$; other subgroups in the series produce different trace spectra and different $\alpha_c$. The discrete half comes from $U_F$: up to global phase, the Howard--Vala qutrit gate $\HV{1}{2}{0}$~\cite{Howard:2012fva} injects $9$th-root phases, requiring $R_Z(2\pi k/9)$ for $k=1,\ldots,8$. The synthesis target for the $\Sigmathree{36}$ qubit pipeline is therefore
 \begin{align}
@@ -462,40 +528,70 @@ Our $t=10$ result that $\Sigmathree{216}$+$\HV{1}{1}{0}$ gives $\QT = 16.56$ on 
 
 \begin{table*}[t]
 \centering
-\caption{\label{tab:distillation}Magic-state distillation (MSD) status for every extension evaluated in this paper. ``Algebra'' is the cyclotomic or quaternionic ring hosting the non-Clifford factor of the extension. ``Status/closest cousin'' combines synthesis and distillation coverage: \textsc{complete} means transversal code, published MSD protocol, and certified normal-form synthesis are all available; \textsc{partial} means a transversal code is available but no matching MSD circuit (or the code--extension pairing is not yet established); \textsc{none} means no cataloged MSD, either because no protocol exists for the algebra or because the extension is not exactly synthesizable. Rows are grouped by qudit dimension and by the panel section in which the extension appears.}
+\caption{\label{tab:distillation}Fault-tolerance coverage of every $(\mathcal{C},g)$ pair evaluated in this paper, decomposed into four independent questions. \textbf{Code:} is a QEC code known with $\mathcal{C}$ as a transversal gate group? \textbf{Host:} does some code host the magic state $g$ (directly or by Clifford conjugation)? \textbf{MSD:} is a circuit published that distills $g$ (or a Clifford-orbit cousin)? \textbf{Synth:} is a certified normal-form (Ross--Selinger-style) exact-synthesis algorithm available for the cyclotomic ring of $g$? Glyphs: \cmark\ established, \pmark\ partial/cousin/indirect, \xmark\ open, \nmark\ not applicable. A row of four \cmark\ is an end-to-end fault-tolerant stack. Ququart literature search confirms no $[[n,k,d]]_4$ code with a transversal finite-SU(4) subgroup action and no ququart-native MSD protocol have been published.}
 \footnotesize
-\begin{tabular}{@{}p{0.20\textwidth} l p{0.42\textwidth} l@{}}
+\begin{tabular}{@{}l|l|cccc|p{0.34\textwidth}@{}}
 \toprule
-Extension & Algebra & Status / closest cousin & Reference \\
-\midrule
-\multicolumn{4}{@{}l}{\emph{$d=2$ canonical (\cref{sec:d2})}} \\
-Clifford$+P(\pi/4)$ (canonical $T$) & \texttt{Z[$\omega_8$, 1/$\sqrt2$]} & \textsc{complete}: BK 15-to-1; Bravyi--Haah triorthogonal & \cite{Bravyi:2004isx,Bravyi:2012czv} \\
-Clifford$+P(\pi/8)$                 & \texttt{Z[$\omega_{16}$, 1/2]}      & \textsc{none}: no published protocol for $\omega_{16}$; cousin BK 15-to-1 does not distill this state & \cite{Bravyi:2004isx} \\
-\midrule
-\multicolumn{4}{@{}l}{\emph{$d=2$ DSA target family (\cref{sec:lamm})}} \\
-Clifford$+P(2\pi/9)$, $P(\pi/9)$, $P(\pi/18)$ & \texttt{Z[$\omega_{18}$, 1/2]} & \textsc{partial (indirect)}: no direct stabilizer-code distillation (Anderson--Jochym-O'Connor~\cite{Anderson:2014}); programmable-MSD distills $|\psi(\theta)\rangle$ on a Clifford$+T$ substrate; PI code-switching~\cite{OuyangJingBrennen:2024} is a non-stabilizer alternative & \cite{DuclosCianciPoulin:2015,CampbellOGorman:2016,CampbellHoward:2017,OuyangJingBrennen:2024} \\
-Clifford$+P(2\pi/5)$                & \texttt{Z[$\omega_{10}$]}           & \textsc{partial (indirect)}: stabilizer-code distillation excluded~\cite{Anderson:2014}; programmable-MSD and PI code-switching both apply to arbitrary $\theta$ & \cite{DuclosCianciPoulin:2015,CampbellOGorman:2016,CampbellHoward:2017,OuyangJingBrennen:2024} \\
-Clifford$+T_{24}$, \texttt{hurwitz}$+T_{12}$ (super-golden) & \texttt{Z[$i, \sqrt2$]} & \textsc{partial}: Parzanchevski--Sarnak supplies transversal base; magic state is not a Clifford-orbit stabilizer rotation, so triorthogonal MSD does not apply & \cite{ParzanchevskiSarnak:2018} \\
-\midrule
-\multicolumn{4}{@{}l}{\emph{Arbitrary-SU($d$) rows, any $d$}} \\
-Clifford$+\mathrm{rnd}$, \texttt{hurwitz}$+\mathrm{rnd}$ ($d=2$) & generic $\mathrm{SU}(2)$ (no ring) & \textsc{none}: not exactly synthesizable, so MSD is not defined & --- \\
-\texttt{BI}$+\mathrm{rnd}$ ($d=2$)  & generic $\mathrm{SU}(2)$ (no ring) & \textsc{partial}: Kubischta $((7,2,3))$ supplies transversal $2I$ base; no MSD for a Haar magic state & \cite{Kubischta:2I} \\
-$\Sigma$-series$+\mathrm{rnd}$ ($d=3$) & generic $\mathrm{SU}(3)$ (no ring) & \textsc{none}: not exactly synthesizable; no cataloged qutrit transversal classification for $\Sigma$-series & --- \\
-\midrule
-\multicolumn{4}{@{}l}{\emph{$d=3$ structured (\cref{sec:d3})}} \\
-$\Sigmathree{360}+\HV{1}{1}{0}$, $\Sigmathree{360}+\HV{2}{1}{0}$ & \texttt{Z[$\omega_9$]} & \textsc{partial}: qutrit triorthogonal $[[9m\!-\!k,k,2]]_3$ distills Howard--Vala magic state; $[[7,1,2]]_3$ and $[[5,1,2]]_3$ twisted $t$-group codes host $\Sigmathree{360}$ transversally (distance-2, error-detecting) & \cite{Campbell:2012jna,KubischtaTeixeira:2024} \\
-$\Sigmathree{72}+\HV{z}{\gamma}{0}$, $\Sigmathree{216}+\HV{z}{\gamma}{0}$ & \texttt{Z[$\omega_9$]} & \textsc{partial}: HV magic state distilled via qutrit triorthogonal; explicit $\Sigmathree{72}$/$\Sigmathree{216}$ data code unknown (open) & \cite{Campbell:2012jna} \\
-$\Sigma+\HV{2}{1}{0}$             & \texttt{Z[$\omega_9$]}            & \textsc{partial}: cousin Campbell--Anwar--Browne qutrit triorthogonal; no protocol certified for this orbit & \cite{Campbell:2012jna} \\
-$\Sigma+P(2\pi/9)$ ($d=3$)          & \texttt{Z[$\omega_9$]}            & \textsc{partial}: qutrit-native $\omega_9$ phase; Campbell--Anwar--Browne applies modulo transversal pairing & \cite{Campbell:2012jna} \\
-$\Sigma+P(\pi/9)$ ($d=3$)           & \texttt{Z[$\omega_{18}$]}           & \textsc{none}: $\omega_{18}$ outside Campbell--Anwar--Browne; no cousin at $d=3$ & --- \\
-$\Sigma+P(2\pi/5)$ ($d=3$)          & \texttt{Z[$\omega_{10}$]}           & \textsc{none}: $\omega_{10}$ not in any qutrit stabilizer setting; no cousin & --- \\
+Base $\mathcal{C}$ & Extension $g$ & Code & Host & MSD & Synth & Refs / notes \\
+\hline
+\multicolumn{7}{@{}l}{\emph{$d=2$ (\cref{sec:d2}, \cref{sec:lamm})}} \\
+\hline
+\multirow{6}{*}{Clifford (2O)}
+  & $P(\pi/4)$ canonical $T$         & \cmark & \cmark & \cmark & \cmark & BK 15-to-1, Bravyi--Haah~\cite{Bravyi:2004isx,Bravyi:2012czv}; Ross--Selinger \\
+  & $P(\pi/8)$                       & \cmark & \xmark & \xmark & \xmark & $\omega_{16}$ outside BK~\cite{Bravyi:2004isx} \\
+  & $P(2\pi/9), P(\pi/9), P(\pi/18)$ & \cmark & \pmark & \pmark & \pmark & AJOC~\cite{Anderson:2014}; programmable-MSD~\cite{DuclosCianciPoulin:2015,CampbellOGorman:2016,CampbellHoward:2017} \& PI code-switching~\cite{OuyangJingBrennen:2024} bypass; BFS only over $\mathbb{Z}[\omega_{18},\tfrac12]$ \\
+  & $P(2\pi/5)$                      & \cmark & \pmark & \pmark & \xmark & same MSD bypass; no normal form for $\mathbb{Z}[\omega_{10}]$ \\
+  & $T_{24}$ super-golden            & \cmark & \pmark & \xmark & \cmark & Parzanchevski--Sarnak~\cite{ParzanchevskiSarnak:2018} \\
+  & $\mathrm{rnd}$                   & \cmark & \nmark & \nmark & \xmark & not exactly synthesizable \\
+\hline
+\multirow{2}{*}{\texttt{hurwitz}}
+  & $T_{12}$ super-golden            & \cmark & \pmark & \xmark & \cmark & Parzanchevski--Sarnak~\cite{ParzanchevskiSarnak:2018} \\
+  & $\mathrm{rnd}$                   & \cmark & \nmark & \nmark & \xmark & --- \\
+\hline
+\multirow{2}{*}{\texttt{BI} (2I)}
+  & $P(2\pi/5)$                       & \cmark & \pmark & \pmark & \xmark & Kubischta $((7,2,3))$ hosts 2I~\cite{Kubischta:2I}; programmable-MSD~\cite{DuclosCianciPoulin:2015,CampbellOGorman:2016} for $\omega_{10}$; no normal form \\
+  & $\mathrm{rnd}$                    & \cmark & \pmark & \xmark & \xmark & 2I code~\cite{Kubischta:2I}; Haar state \\
+\hline
+\multicolumn{7}{@{}l}{\emph{$d=3$ (\cref{sec:d3})}} \\
+\hline
+\multirow{4}{*}{$\Sigmathree{360}$}
+  & $\HV{1}{1}{0}, \HV{2}{1}{0}$     & \cmark & \cmark & \cmark & \xmark & K--T $[[7,1,2]]_3$, $[[5,1,2]]_3$~\cite{KubischtaTeixeira:2024}; qutrit triorth.~\cite{Campbell:2012jna,PrakashSaha:2025}; Anwar--Browne--Campbell~\cite{Anwar:2012qutrit}; Howard--Campbell~\cite{HowardCampbell:2017}; no exact-synthesis normal form for $\Sigmathree{360}$ \\
+  & $P(2\pi/9)$                      & \cmark & \cmark & \cmark & \xmark & qutrit triorth.~\cite{Campbell:2012jna}; Prakash low-overhead~\cite{Prakash:2020lowoverhead}; no synthesis for $\Sigmathree{360}{+}P$ \\
+  & $U_S$ (strange)                  & \cmark & \cmark & \cmark & \xmark & ternary Golay $[[11,1,5]]_3$~\cite{Prakash:2020lowoverhead}; K--T base code~\cite{KubischtaTeixeira:2024}; no exact-synthesis ring \\
+  & $\mathrm{rnd}$                   & \cmark & \nmark & \nmark & \xmark & --- \\
+\hline
+\multirow{4}{*}{$\Sigmathree{216}$ (qutrit Cliff.)}
+  & $\HV{z}{\gamma}{0}$              & \cmark & \cmark & \cmark & \cmark & qutrit triorth.~\cite{Campbell:2012jna,PrakashSaha:2025}; Anwar--Browne--Campbell~\cite{Anwar:2012qutrit}; Clifford$+R$~\cite{Gustafson:2025qutrit} \\
+  & $U_S$ (strange)                  & \cmark & \cmark & \cmark & \cmark & ternary Golay~\cite{Prakash:2020lowoverhead}; Clifford$+R$~\cite{Gustafson:2025qutrit} \\
+  & $P(\pi/9), P(2\pi/5)$            & \cmark & \xmark & \xmark & \xmark & $\omega_{18}, \omega_{10}$ outside qutrit catalog \\
+  & $\mathrm{rnd}$                   & \cmark & \nmark & \nmark & \xmark & --- \\
+\hline
+\multirow{2}{*}{$\Sigmathree{72}$}
+  & $\HV{z}{\gamma}{0}$              & \xmark & \cmark & \cmark & \xmark & no transversal code for $\Sigmathree{72}$; HV MSD via triorth.~\cite{Campbell:2012jna,PrakashSaha:2025} on a separate code; no synthesis normal form for $\Sigmathree{72}$ \\
+  & $U_S$ (strange)                  & \xmark & \cmark & \cmark & \xmark & ternary Golay~\cite{Prakash:2020lowoverhead}; no $\Sigmathree{72}$ transversal code or synthesis ring \\
+\hline
+\multicolumn{7}{@{}l}{\emph{$d=4$ Fairbairn subgroups (pilot; literature catalog gap verified by arXiv search, 2026-04)}} \\
+\hline
+$A_5$                  & $P(\theta)$, $\mathrm{rnd}$ ($t{=}2,3,4$) & \xmark & \xmark & \xmark & \xmark & primitive SU(4) inherited via SU(2) embedding; reducible $\mathrm{Ad}_{\mathcal C}$ \\
+\hline
+$\Sigma(60{\times}4)$  & $P(\theta)$, $\mathrm{rnd}$ ($t{=}2,3,4$) & \xmark & \xmark & \xmark & \xmark & central $\mathbb Z_4$ extension of $A_5$ \\
+\hline
+$\Sigma(120{\times}4)_1$ & $P(\theta)$, $\mathrm{rnd}$ ($t{=}2,3,4$) & \xmark & \xmark & \xmark & \xmark & one of two non-isomorphic order-480 primitives \\
+\hline
+$\Sigma(120{\times}4)_2$ & $P(\theta)$, $\mathrm{rnd}$ ($t{=}2,3,4$) & \xmark & \xmark & \xmark & \xmark & second order-480 primitive (twisted lift) \\
+\hline
+$\Sigma(720{\times}4)$ & $P(\theta)$ structured ($t{=}2$ only) & \xmark & \xmark & \xmark & \xmark & central $\mathbb Z_4$ lift of $A_6$; large-$|\mathcal C|$ $t{\geq}3$ deferred (see \cref{sec:discussion_limits}) \\
+\hline
+$S_7$ (\texttt{s7f})  & $P(\theta)$ structured ($t{=}2$ only) & \xmark & \xmark & \xmark & \xmark & $|\mathcal C|=5040$; $t{\geq}3$ requires cluster slot \\
+\hline
+\multicolumn{7}{@{}p{0.95\textwidth}}{\footnotesize Common to all $d{=}4$ rows: no $[[n,k,d]]_4$ code with transversal SU(4)-finite subgroup is found in the literature; GF(4) stabilizer codes~\cite{AshikhminKnill:2001} treat $d{=}4$ as two qubits; AJOC~\cite{Anderson:2014} applies in characteristic 2; ququart MSD literature skips non-prime $d$ (Brock~\emph{et al.}~\cite{Brock:2025ququart} demonstrate ququart GKP memory but no transversal non-Clifford gate).} \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
 \subsection{Limitations}\label{sec:discussion_limits}
 
-Three limitations frame the numerical claims. First, the $d=3$ Haar statistics come from either single-sample $t=10$ draws or the $100$-matrix apples-to-apples panel at $t=5$ (\cref{sec:d3_apples}); a joint $t=10$, $\sim\!100$-sample Haar run is held up by a qco-kernel limitation that aggregates each subprocess to a single output row regardless of sample size. Second, no $d=4$ survey is attempted: largest-irrep dimensions scale as $t^6$ at $d=4$ and squared matrix-storage as $t^{12}$, so only the smallest SU(4) subgroups ($|\mathcal{C}|\lesssim 300$) fit in a single-node 125\,GB budget at $t=10$. A pilot on those is tractable overnight; the large-$|\mathcal{C}|$ SU(4) subgroups (e.g.\ $\mathrm{S7F}$) would need a cluster slot. Third, the target-family $T$-counts in \cref{tab:lamm_sigma36} are depth-$15$ BFS upper bounds except for the Ross--Selinger-certified Clifford$+P(\pi/4)$ row. The $6.8\times$ advantage is a \emph{lower bound}: a certified normal form over $\mathbb{Z}[\omega_{18},\tfrac{1}{2}]$~\cite{Forest:2015cc} would only tighten the BFS side, not the canonical side, which is already exact.
+Three limitations frame the numerical claims. First, the $d=3$ Haar statistics come from either single-sample $t=10$ draws or the $100$-matrix apples-to-apples panel at $t=5$ (\cref{sec:d3_apples}); a joint $t=10$, $\sim\!100$-sample Haar run is held up by a qco-kernel limitation that aggregates each subprocess to a single output row regardless of sample size. Second, the $d=4$ Fairbairn pilot (\cref{sec:d4}) reaches only $t=4$ on the four smallest groups and $t=2$ on $\Sigma(720{\times}4)$ and $S_7$; largest-irrep dimensions scale as $t^6$ at $d=4$ and matrix storage as $t^{12}$, so a converged $t=10$ run on the large-$|\mathcal{C}|$ SU(4) subgroups would need a cluster slot. Third, the target-family $T$-counts in \cref{tab:lamm_sigma36} are depth-$15$ BFS upper bounds except for the Ross--Selinger-certified Clifford$+P(\pi/4)$ row. The $6.8\times$ advantage is a \emph{lower bound}: a certified normal form over $\mathbb{Z}[\omega_{18},\tfrac{1}{2}]$~\cite{Forest:2015cc} would only tighten the BFS side, not the canonical side, which is already exact.
 
 \subsection{Open questions}\label{sec:discussion_open}
 

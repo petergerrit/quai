@@ -176,6 +176,62 @@ _PROTOCOLS: list[DistillationRecord] = [
         reference="Magic state distillation with the ternary Golay code, RSPA (2020)",
         notes="Distills the ‘strange’ qutrit magic state; high threshold but low yield.",
     ),
+    DistillationRecord(
+        protocol_name="Anwar-Browne-Campbell qutrit MSD",
+        target_gate_family="qutrit T",
+        qudit_dim=3,
+        code_name="5-qutrit / [[5,1,3]]_3 stabilizer",
+        yield_parameter=None,
+        reference="Anwar, Campbell & Browne, NJP 14, 063006 (2012) [arXiv:1202.2326]",
+        notes=(
+            "Earliest qutrit MSD: distills the Howard-Vala-class T-magic state "
+            "on the 5-qutrit code via post-selected projection. Foundational; "
+            "superseded on yield by the [[9m-k,k,2]]_3 triorthogonal family but "
+            "the canonical reference for qutrit T distillation."
+        ),
+    ),
+    DistillationRecord(
+        protocol_name="Howard-Campbell qudit-T contextuality MSD",
+        target_gate_family="qutrit T",
+        qudit_dim=3,
+        code_name="qudit stabilizer (no specific [[n,k,d]])",
+        yield_parameter=None,
+        reference="Howard & Campbell, PRL 118, 090501 (2017) [arXiv:1610.07154]",
+        notes=(
+            "Magic-state robustness / contextuality bound. Gives a non-trivial "
+            "monotone for qudit MSD that establishes which states are exactly "
+            "distillable; applied directly to qutrit T-states. Not a circuit "
+            "construction but a theoretical scope statement that complements "
+            "Anwar-Browne-Campbell."
+        ),
+    ),
+    DistillationRecord(
+        protocol_name="Prakash low-overhead qudit MSD",
+        target_gate_family="qutrit T",
+        qudit_dim=3,
+        code_name="qudit triorthogonal (asymptotic family)",
+        yield_parameter=0.5,
+        reference="Prakash, arXiv:2003.02717 (2020)",
+        notes=(
+            "Low-space-overhead qudit MSD with asymptotic input count "
+            "Θ(log(1/ε)). Yield exponent γ → 1/2 for qutrits, beating earlier "
+            "qutrit constructions. Directly applicable to the HV magic state."
+        ),
+    ),
+    DistillationRecord(
+        protocol_name="Krishna-Tillich qudit cascading",
+        target_gate_family="qutrit T",
+        qudit_dim=3,
+        code_name="cascaded qudit stabilizer codes",
+        yield_parameter=0.0,
+        reference="Krishna & Tillich, PRL 123, 070507 (2019) [arXiv:1811.08461]",
+        notes=(
+            "Cascaded qudit-MSD construction with γ → 0 asymptotically. "
+            "Opened the low-overhead qudit-MSD programme that Prakash 2020 "
+            "and Cervia~et~al.~2025 extend; usable as a qutrit T-distillation "
+            "scheme via the d=3 instantiation of the cascade."
+        ),
+    ),
 ]
 
 
